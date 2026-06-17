@@ -232,36 +232,36 @@ const haikus: Record<number, string[]> = {
 };
 
 const meals: Record<number, DayMeals> = {
-  1: { breakfast: { text: "In transit — long-haul flight, arrive Narita past noon", booked: false }, lunch: { text: "Narita Airport ramen hall · a grounding bowl of shoyu or tonkotsu, the first Japanese mouthful", booked: false }, dinner: { text: "Ginza Happo · raw oysters on ice and snow crab legs, first maritime meal of the journey", booked: true } },
-  2: { breakfast: { text: "Kimuraya Honten Ginza · Japan's oldest bakery (est. 1869), fresh anpan straight from the oven on Chuo-dori", booked: false }, lunch: { text: "Maisen Tonkatsu Aoyama · legendary crispy pork cutlet set in a converted Meiji-era public bathhouse", booked: false }, dinner: { text: "Sushi Yoshitake or Ginza Sushi Iwa · intimate omakase nigiri at the counter, seasonal selections", booked: false } },
-  3: { breakfast: { text: "Shiseido Parlour Ginza · seventh-floor café above the historic cosmetics flagship, eggs and coffee over the rooftops", booked: false }, lunch: { text: "Sometaro Asakusa · monjayaki griddle cakes and cold Sapporo in the old shitamachi quarter", booked: false }, dinner: { text: "Otafuku Asakusa (est. 1945) · oden simmered in clear dashi, a beloved winter ritual in the old neighbourhood", booked: false } },
-  4: { breakfast: { text: "Shinjuku Isetan B2 food hall · melon pan and seasonal fruit from Japan's most celebrated basement market", booked: false }, lunch: { text: "Fuunji Shinjuku · thick wavy tsukemen with a richly complex dipping broth, a Shinjuku cult institution", booked: false }, dinner: { text: "Omoide Yokocho · binchotan yakitori in the smoky lantern-lit alley, cold draft beer, Shinjuku night", booked: true } },
-  5: { breakfast: { text: "Standing soba at Iwa near Shinbashi · a quick pre-shinkansen bowl of cold seiro soba, classic Tokyo fuel", booked: false }, lunch: { text: "Ekiben on the Shinkansen · wappa meshi bento box, cold green tea, watching the coast dissolve into green hills", booked: false }, dinner: { text: "Asaba Ryokan kaiseki · mountain vegetables, clear dashi, perfect local sake — first night deep in the Izu forest", booked: false } },
-  6: { breakfast: { text: "Morning walk to Shuzenji town · fresh warabi mochi and matcha at Toko-an sweet shop by the ancient spring", booked: false }, lunch: { text: "Shuzenji Agetofu · freshly deep-fried local tofu near the bamboo shrine, cold matcha alongside", booked: false }, dinner: { text: "Asaba multi-course kaiseki · sixteen lacquered courses, the floating Noh stage lit against the still water", booked: true } },
-  7: { breakfast: { text: "Oraga Soba Shuzenji · handmade buckwheat noodles at a riverside local, a final taste of Izu before the mountain transit", booked: false }, lunch: { text: "Yuba tofu café in Hakone · silken tofu skin drawn fresh from soy milk, ponzu, mountain quietude", booked: false }, dinner: { text: "Gyoza Center Hakone Yumoto · no-frills gyoza and ramen beloved by the mountain-town locals, comfort after the switchback climb", booked: false } },
-  8: { breakfast: { text: "Amazake Chaya (甘酒茶屋) · a tea house in continuous operation since 1618 on the old Tokaido road, sweet fermented amazake and grilled mochi", booked: false }, lunch: { text: "Owakudani kuro-tamago · sulfur-blackened eggs boiled in volcanic spring water, eaten hot on the ridge", booked: false }, dinner: { text: "Kasho Gyoshin near Hakone · local kaiseki dinner away from the hotel, mountain forage and delicate plating", booked: false } },
-  9: { breakfast: { text: "Bakery & Table Hakone Yumoto · lakeside morning toast and coffee at the wooden terrace before the long westward transit", booked: false }, lunch: { text: "En route stop · Omi beef yakiniku at a Shiga roadside restaurant — the prefecture's quietly famous hidden gem", booked: false }, dinner: { text: "Shatei Hamasho Otsu · freshwater eel (unagi) and funa-zushi (fermented crucian carp) at a local lakeside restaurant, Shiga's most ancient flavour", booked: false } },
+  1:  { breakfast: { text: "In transit — long-haul flight, arrive Narita past noon", booked: false }, lunch: { text: "Narita Airport ramen hall · a grounding bowl of shoyu or tonkotsu, the first Japanese mouthful", booked: false }, dinner: { text: "Ginza Happo · raw oysters on ice and snow crab legs, first maritime meal of the journey", booked: true  } },
+  2:  { breakfast: { text: "Kimuraya Honten Ginza · Japan's oldest bakery (est. 1869), fresh anpan straight from the oven on Chuo-dori", booked: false }, lunch: { text: "Maisen Tonkatsu Aoyama · legendary crispy pork cutlet set in a converted Meiji-era public bathhouse", booked: false }, dinner: { text: "Sushi Yoshitake or Ginza Sushi Iwa · intimate omakase nigiri at the counter, seasonal selections", booked: false } },
+  3:  { breakfast: { text: "Shiseido Parlour Ginza · seventh-floor café above the historic cosmetics flagship, eggs and coffee over the rooftops", booked: false }, lunch: { text: "Sometaro Asakusa · monjayaki griddle cakes and cold Sapporo in the old shitamachi quarter", booked: false }, dinner: { text: "Otafuku Asakusa (est. 1945) · oden simmered in clear dashi, a beloved winter ritual in the old neighbourhood", booked: false } },
+  4:  { breakfast: { text: "Shinjuku Isetan B2 food hall · melon pan and seasonal fruit from Japan's most celebrated basement market", booked: false }, lunch: { text: "Fuunji Shinjuku · thick wavy tsukemen with a richly complex dipping broth, a Shinjuku cult institution", booked: false }, dinner: { text: "Omoide Yokocho · binchotan yakitori in the smoky lantern-lit alley, cold draft beer, Shinjuku night", booked: true  } },
+  5:  { breakfast: { text: "Standing soba at Iwa near Shinbashi · a quick pre-shinkansen bowl of cold seiro soba, classic Tokyo fuel", booked: false }, lunch: { text: "Ekiben on the Shinkansen · wappa meshi bento box, cold green tea, watching the coast dissolve into green hills", booked: false }, dinner: { text: "Asaba Ryokan kaiseki · mountain vegetables, clear dashi, perfect local sake — first night deep in the Izu forest", booked: false } },
+  6:  { breakfast: { text: "Morning walk to Shuzenji town · fresh warabi mochi and matcha at Toko-an sweet shop by the ancient spring", booked: false }, lunch: { text: "Shuzenji Agetofu · freshly deep-fried local tofu near the bamboo shrine, cold matcha alongside", booked: false }, dinner: { text: "Asaba multi-course kaiseki · sixteen lacquered courses, the floating Noh stage lit against the still water", booked: true  } },
+  7:  { breakfast: { text: "Oraga Soba Shuzenji · handmade buckwheat noodles at a riverside local, a final taste of Izu before the mountain transit", booked: false }, lunch: { text: "Yuba tofu café in Hakone · silken tofu skin drawn fresh from soy milk, ponzu, mountain quietude", booked: false }, dinner: { text: "Gyoza Center Hakone Yumoto · no-frills gyoza and ramen beloved by the mountain-town locals, comfort after the switchback climb", booked: false } },
+  8:  { breakfast: { text: "Amazake Chaya (甘酒茶屋) · a tea house in continuous operation since 1618 on the old Tokaido road, sweet fermented amazake and grilled mochi", booked: false }, lunch: { text: "Owakudani kuro-tamago · sulfur-blackened eggs boiled in volcanic spring water, eaten hot on the ridge", booked: false }, dinner: { text: "Kasho Gyoshin near Hakone · local kaiseki dinner away from the hotel, mountain forage and delicate plating", booked: false } },
+  9:  { breakfast: { text: "Bakery & Table Hakone Yumoto · lakeside morning toast and coffee at the wooden terrace before the long westward transit", booked: false }, lunch: { text: "En route stop · Omi beef yakiniku at a Shiga roadside restaurant — the prefecture's quietly famous hidden gem", booked: false }, dinner: { text: "Shatei Hamasho Otsu · freshwater eel (unagi) and funa-zushi (fermented crucian carp) at a local lakeside restaurant, Shiga's most ancient flavour", booked: false } },
   10: { breakfast: { text: "Otsu morning market · freshly caught lake fish, pickled vegetables, and miso from the waterside market stalls", booked: false }, lunch: { text: "Near Yamazaki Distillery · whisky-paired small plates and Kyoto vegetable dishes at a riverside restaurant", booked: false }, dinner: { text: "Endo Sushi near Osaka Fish Market · the legendary market sushi counter open since the wholesale market days, fish so fresh it needs nothing", booked: false } },
-  11: { breakfast: { text: "Ichiwa mochi-ya · grilled mochi with sweet red bean paste at a shop that has stood near Imamiya Shrine since the year 1000", booked: false }, lunch: { text: "Mizuno Okonomiyaki · Dotonbori's 1945 original, mountain-yam batter griddled tableside to a golden crust", booked: false }, dinner: { text: "Daruma Kushikatsu · the original 1929 panko-skewer counter — crispy, golden, strict no-double-dipping rule enforced", booked: true } },
+  11: { breakfast: { text: "Ichiwa mochi-ya · grilled mochi with sweet red bean paste at a shop that has stood near Imamiya Shrine since the year 1000", booked: false }, lunch: { text: "Mizuno Okonomiyaki · Dotonbori's 1945 original, mountain-yam batter griddled tableside to a golden crust", booked: false }, dinner: { text: "Daruma Kushikatsu · the original 1929 panko-skewer counter — crispy, golden, strict no-double-dipping rule enforced", booked: true  } },
   12: { breakfast: { text: "Café Absinthe Nakazakicho · creative all-day brunch in Osaka's most charming vintage neighbourhood, vintage tiles and morning coffee", booked: false }, lunch: { text: "Tsuruhashi yakiniku · tabletop wagyu and kimchi in Osaka's Korean quarter, the oldest and most fragrant covered market", booked: false }, dinner: { text: "Namba takoyaki crawl · five different stands along the Golden Street, comparing batter, char, and bonito flake technique", booked: false } },
   13: { breakfast: { text: "Chibo Namba · one final Osaka okonomiyaki before the train north — the city's unofficial farewell dish, griddle-crisped at the table", booked: false }, lunch: { text: "Nishiki Market, Kyoto · Kyoto's ancient kitchen — tamagoyaki skewers, fresh tsukemono, tofu, warm soy milk from the stalls", booked: false }, dinner: { text: "Kikunoi Roan · the warm branch of 3-Michelin-star Kikunoi, Kyoto kaiseki in the stone-lantern-lined Maruyama hills", booked: false } },
   14: { breakfast: { text: "Inoda Coffee Honten · the Kyoto kissaten institution since 1940, European-style breakfast in a beloved old shophouse near Sanjo", booked: false }, lunch: { text: "Shoraian Yudofu near Kinkaku-ji · silken tofu simmered slowly in spring-clear dashi in an old garden setting", booked: false }, dinner: { text: "Kichisen Kyoto · Japan's most revered kaiseki table — tea-ceremony cuisine at its very peak, book months ahead", booked: false } },
   15: { breakfast: { text: "Sarasa Nishijin · morning coffee and toast in a converted 1920s public bathhouse, azulejo-tiled walls and slow light", booked: false }, lunch: { text: "Canal-side café on the Philosopher's Path · tofu dengaku and cold barley tea, a wooden bench above the stone waterway", booked: false }, dinner: { text: "Hyotei Kyoto · one of the oldest kaiseki restaurants in the world, serving the morning tea-ceremony meal since the 1600s", booked: false } },
-  16: { breakfast: { text: "Café Bibliotic Hello! · morning pour-over in a converted Kyoto machiya townhouse, textured plaster walls and quiet shelves", booked: false }, lunch: { text: "Takagamine Tea House Estate · wagashi sweets and whisked matcha, deep tatami silence in the northern hills", booked: true }, dinner: { text: "ROKU KYOTO Clay-Pot Crab Rice · sweet snow crab steamed over heirloom rice, intimate donabe at the foothills", booked: true } },
+  16: { breakfast: { text: "Café Bibliotic Hello! · morning pour-over in a converted Kyoto machiya townhouse, textured plaster walls and quiet shelves", booked: false }, lunch: { text: "Takagamine Tea House Estate · wagashi sweets and whisked matcha, deep tatami silence in the northern hills", booked: true  }, dinner: { text: "ROKU KYOTO Clay-Pot Crab Rice · sweet snow crab steamed over heirloom rice, intimate donabe at the foothills", booked: true  } },
   17: { breakfast: { text: "Tousuiro near Kyoto Station · a tofu kaiseki morning set — silken, clear-dashi richness, the definitive final Kyoto meal", booked: false }, lunch: { text: "Tokyo Station Ramen Street · eight premier ramen shops beneath the historic brick vault, choose your broth", booked: false }, dinner: { text: "Sushi Kanesaka Ginza · an elegant omakase counter a short walk from the station, a refined return to the capital", booked: false } },
   18: { breakfast: { text: "Le Bretagne Yurakucho · Breton buckwheat galettes and café crème across from Hibiya Park, a beloved Tokyo morning institution since 1994", booked: false }, lunch: { text: "Marunouchi sushi · a final counter omakase — close the loop on the journey in the shadow of the old brick station", booked: false }, dinner: { text: "Haneda international lounge · a quiet pre-flight meal before the long arc home", booked: false } }
 };
 
 const dayMeta: Record<number, { title: string; lodging: string }> = {
-  1: { title: "Day 1: Arrival into Neon Mist", lodging: "Hyatt Centric Ginza" },
-  2: { title: "Day 2: Secret Gardens & Mechanical Masters", lodging: "Hyatt Centric Ginza" },
-  3: { title: "Day 3: Shokunin Crafts & Sumida Reflections", lodging: "Hyatt Centric Ginza" },
-  4: { title: "Day 4: Mid-Century Vinyl & Izakaya Alleyways", lodging: "Hyatt Centric Ginza" },
-  5: { title: "Day 5: Coastal Pathways into the Izu Peninsula", lodging: "Asaba Ryokan" },
-  6: { title: "Day 6: Deep Bamboo Groves & Floating Noh Stages", lodging: "Asaba Ryokan" },
-  7: { title: "Day 7: Through Cloud Passes to Hakone Caldera", lodging: "Gora Kadan" },
-  8: { title: "Day 8: Open-Air Sculpture & Volcanic Vents", lodging: "Gora Kadan" },
-  9: { title: "Day 9: Lake Biwa Rail Cruising", lodging: "Biwako Ryokisui" },
+  1:  { title: "Day 1: Arrival into Neon Mist", lodging: "Hyatt Centric Ginza" },
+  2:  { title: "Day 2: Secret Gardens & Mechanical Masters", lodging: "Hyatt Centric Ginza" },
+  3:  { title: "Day 3: Shokunin Crafts & Sumida Reflections", lodging: "Hyatt Centric Ginza" },
+  4:  { title: "Day 4: Mid-Century Vinyl & Izakaya Alleyways", lodging: "Hyatt Centric Ginza" },
+  5:  { title: "Day 5: Coastal Pathways into the Izu Peninsula", lodging: "Asaba Ryokan" },
+  6:  { title: "Day 6: Deep Bamboo Groves & Floating Noh Stages", lodging: "Asaba Ryokan" },
+  7:  { title: "Day 7: Through Cloud Passes to Hakone Caldera", lodging: "Gora Kadan" },
+  8:  { title: "Day 8: Open-Air Sculpture & Volcanic Vents", lodging: "Gora Kadan" },
+  9:  { title: "Day 9: Lake Biwa Rail Cruising", lodging: "Biwako Ryokisui" },
   10: { title: "Day 10: Distilleries of the Yamazaki Glen", lodging: "InterContinental Osaka" },
   11: { title: "Day 11: Osaka Neon Valleys & Street Gastronomy", lodging: "InterContinental Osaka" },
   12: { title: "Day 12: Architectural Concrete & Tadao Ando", lodging: "InterContinental Osaka" },
@@ -278,15 +278,15 @@ const vignettePlacement: Record<number, number | null> = {
 };
 
 const vignetteStyle: Record<number, string> = {
-  1: "float:right;width:192px;height:118px;margin:4px 0 8px 12px;transform:rotate(2deg)",
-  2: "float:right;width:165px;height:165px;margin:4px 0 8px 12px;transform:rotate(-2.5deg)",
-  3: "float:right;width:210px;height:95px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
-  4: "float:right;width:168px;height:168px;margin:4px 0 8px 12px;transform:rotate(4deg)",
-  5: "float:right;width:200px;height:118px;margin:4px 0 8px 12px;transform:rotate(-1deg)",
-  6: "float:right;width:108px;height:195px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
-  7: "float:right;width:198px;height:112px;margin:4px 0 8px 12px;transform:rotate(1deg)",
-  8: "float:right;width:188px;height:112px;margin:4px 0 8px 12px;transform:rotate(-3deg)",
-  9: "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
+  1:  "float:right;width:192px;height:118px;margin:4px 0 8px 12px;transform:rotate(2deg)",
+  2:  "float:right;width:165px;height:165px;margin:4px 0 8px 12px;transform:rotate(-2.5deg)",
+  3:  "float:right;width:210px;height:95px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
+  4:  "float:right;width:168px;height:168px;margin:4px 0 8px 12px;transform:rotate(4deg)",
+  5:  "float:right;width:200px;height:118px;margin:4px 0 8px 12px;transform:rotate(-1deg)",
+  6:  "float:right;width:108px;height:195px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
+  7:  "float:right;width:198px;height:112px;margin:4px 0 8px 12px;transform:rotate(1deg)",
+  8:  "float:right;width:188px;height:112px;margin:4px 0 8px 12px;transform:rotate(-3deg)",
+  9:  "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
   10: "float:right;width:172px;height:162px;margin:4px 0 8px 12px;transform:rotate(2.5deg)",
   11: "float:right;width:178px;height:145px;margin:4px 0 8px 12px;transform:rotate(-3.5deg)",
   12: "float:right;width:168px;height:158px;margin:4px 0 8px 12px;transform:rotate(-1.5deg)",
@@ -297,23 +297,6 @@ const vignetteStyle: Record<number, string> = {
   17: "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
   18: "float:right;width:200px;height:118px;margin:4px 0 8px 12px;transform:rotate(1.5deg)"
 };
-
-// --- HIGH FIDELITY ANTIQUE WATERCOLOR GOOGLE MAP SKIN ---
-const RETRO_MAP_STYLE = [
-  { "elementType": "geometry", "stylers": [{ "color": "#ebe3cd" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#523735" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f1e6" }] },
-  { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#c9b2a6" }] },
-  { "featureType": "landscape.natural", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
-  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
-  { "featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{ "color": "#a5b076" }] },
-  { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#447530" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#f5f1e6" }] },
-  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#f8c967" }] },
-  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#e9bc62" }] },
-  { "featureType": "water", "elementType": "geometry.fill", "stylers": [{ "color": "#aac2c7" }] },
-  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#607478" }] }
-];
 
 // --- SUB-COMPONENTS ---
 
@@ -616,15 +599,7 @@ const JournalPane: React.FC = () => {
 
   return (
     <div className="journal-pane" style={{ '--rc': color } as React.CSSProperties}>
-      
-      {/* Notebook Binder Rings (Top and bottom layout overlay style) */}
-      <div className="absolute left-3 top-0 bottom-0 flex flex-col justify-around pointer-events-none opacity-20 z-20">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="w-4 h-4 rounded-full border-2 border-dashed border-[#544436]"></div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '96px', paddingLeft: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '96px' }}>
         <div>
           <span className="region-tag">{region} Region</span>
           <h2 className="day-title"><span style={{ color: color }}>〜</span> {metadata.title}</h2>
@@ -632,7 +607,7 @@ const JournalPane: React.FC = () => {
             <span className="lodging-badge">LODGING</span>
             <span className="lodging-name">{metadata.lodging}</span>
           </div>
-          <div style={{ height: '2px', width: '100%', background: `linear-gradient(to right, ${color}, #cdbf9c, transparent)`, marginTop: '12px' }} />
+          <div style={{ height: '2px', width: '100%', background: `linear-gradient(to right, ${color}, #cdbf9c, transparent)`, marginTop: '8px' }} />
         </div>
         <div className="timeline-container">{elements}</div>
         <MealsSection />
@@ -721,19 +696,7 @@ const MapPane: React.FC = () => {
   const [mapType, setMapType] = useState<'roadmap' | 'hybrid'>('roadmap');
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <Map 
-        id="travel_map" 
-        defaultCenter={{ lat: 35.6762, lng: 139.6503 }} 
-        defaultZoom={11} 
-        mapTypeId={mapType} 
-        disableDefaultUI={true} 
-        zoomControl={true} 
-        style={{ width: '100%', height: '100%' }}
-        options={{
-          styles: RETRO_MAP_STYLE,
-          gestureHandling: 'cooperative'
-        }}
-      >
+      <Map id="travel_map" defaultCenter={{ lat: 35.6762, lng: 139.6503 }} defaultZoom={11} mapTypeId={mapType} disableDefaultUI={true} zoomControl={true} style={{ width: '100%', height: '100%' }}>
         <MapEngine activeDay={activeDay} />
         <MapControl position={ControlPosition.TOP_RIGHT}>
           <div className="map-controls-overlay">
@@ -767,14 +730,7 @@ const App: React.FC = () => {
         <DayNav />
         <RegionLegend />
         <main className="main-content">
-          {/* Notebook cover container on left split */}
-          <section className="journal-pane-wrapper flex flex-row" style={{ boxShadow: editMode ? 'inset 0 0 0 2px var(--amber)' : 'none' }}>
-            {/* Opened Leather Spine binding panel */}
-            <div className="w-4 md:w-6 leather-spine flex flex-col justify-around py-16 relative">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-3 h-3 rounded-full bg-gradient-to-br from-[#d4af37] to-[#8c6d1b] border border-[#52441c] shadow-md mx-auto"></div>
-              ))}
-            </div>
+          <section className="journal-pane-wrapper" style={{ borderRight: '1px solid var(--paper-fold)', boxShadow: editMode ? 'inset 0 0 0 2px var(--amber)' : 'none' }}>
             <JournalPane />
           </section>
           <section className="map-pane-wrapper">
