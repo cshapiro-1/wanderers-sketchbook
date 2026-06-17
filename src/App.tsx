@@ -52,18 +52,26 @@ export interface UserEdits {
   meals: Record<string, { breakfast?: string; lunch?: string; dinner?: string }>;
 }
 
+interface DocEntry { name: string; b64: string; mime: string; }
+
 interface TravelStore {
   activeDay: number;
   editMode: boolean;
+  cardDay: number | null;
   userEdits: UserEdits;
   reservations: Record<number, Reservation>;
+  documents: Record<number, DocEntry[]>;
   selectedActivity: { key: string; lat: number; lng: number } | null;
   setActiveDay: (day: number) => void;
+  openCard: (day: number) => void;
+  closeCard: () => void;
   toggleEditMode: () => void;
   updateActivityEdit: (dayId: number, actIndex: number, field: 'title' | 'description', val: string) => void;
   updateMealEdit: (dayId: number, mealType: 'breakfast' | 'lunch' | 'dinner', val: string) => void;
   updateReservation: (dayId: number, fields: Partial<Reservation>) => void;
   selectActivity: (key: string, lat: number, lng: number) => void;
+  addDocument: (dayId: number, entry: DocEntry) => void;
+  removeDocument: (dayId: number, idx: number) => void;
 }
 
 const EDITS_KEY = 'wanderer_edits_v1';
@@ -72,12 +80,29 @@ const RESERVATIONS_KEY = 'wanderer_reservations_v1';
 const useStore = create<TravelStore>((set) => ({
   activeDay: 1,
   editMode: false,
+  cardDay: null,
   userEdits: JSON.parse(localStorage.getItem(EDITS_KEY) || '{"activities":{},"meals":{}}'),
   reservations: JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '{}'),
+  documents: JSON.parse(localStorage.getItem('wanderer_docs_v1') || '{}'),
   selectedActivity: null,
 
-  setActiveDay: (day) => set({ activeDay: day, selectedActivity: null }),
+  setActiveDay: (day) => set({ activeDay: day, selectedActivity: null, cardDay: null }),
+  openCard: (day) => set({ cardDay: day }),
+  closeCard: () => set({ cardDay: null }),
   selectActivity: (key, lat, lng) => set({ selectedActivity: { key, lat, lng } }),
+
+  addDocument: (dayId, entry) => set((state) => {
+    const next = { ...state.documents };
+    next[dayId] = [...(next[dayId] || []), entry];
+    localStorage.setItem('wanderer_docs_v1', JSON.stringify(next));
+    return { documents: next };
+  }),
+  removeDocument: (dayId, idx) => set((state) => {
+    const next = { ...state.documents };
+    next[dayId] = (next[dayId] || []).filter((_, i) => i !== idx);
+    localStorage.setItem('wanderer_docs_v1', JSON.stringify(next));
+    return { documents: next };
+  }),
   toggleEditMode: () => set((state) => ({ editMode: !state.editMode })),
 
   updateActivityEdit: (dayId, actIndex, field, val) => set((state) => {
@@ -382,47 +407,54 @@ const Header: React.FC = () => (
   </header>
 );
 
+const regionGroups = [
+  { name: 'Tokyo',         color: '#c87e18', days: [1,2,3,4]        },
+  { name: 'Izu Peninsula', color: '#4a7848', days: [5,6]            },
+  { name: 'Hakone',        color: '#5878a0', days: [7,8]            },
+  { name: 'Lake Biwa',     color: '#388888', days: [9]              },
+  { name: 'Osaka',         color: '#b84428', days: [10,11,12]       },
+  { name: 'Kyoto',         color: '#7a4a88', days: [13,14,15,16]    },
+  { name: 'Tokyo',         color: '#c87e18', days: [17,18]          },
+];
+
 const DayNav: React.FC = () => {
-  const { activeDay, setActiveDay } = useStore();
+  const { activeDay, setActiveDay, openCard } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const activeEl = containerRef.current?.querySelector(`[data-day="${activeDay}"]`);
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
+    if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
   }, [activeDay]);
 
   return (
     <div className="nav-container">
       <div ref={containerRef} className="day-nav">
-        {Array.from({ length: 18 }, (_, i) => {
-          const day = i + 1;
-          const reg = regionMap[day];
-          const color = regionColors[reg];
-          const isActive = activeDay === day;
-          return (
-            <button key={day} data-day={day} onClick={() => setActiveDay(day)} className={`nav-btn ${isActive ? 'active' : ''}`}>
-              <div className="nav-btn-color-bar" style={{ backgroundColor: color }} />
-              DAY {day}
-            </button>
-          );
-        })}
+        {regionGroups.map((group, gi) => (
+          <div key={gi} className="nav-region-group">
+            <div className="nav-region-label" style={{ color: group.color }}>{group.name}</div>
+            <div className="nav-region-days">
+              {group.days.map(day => {
+                const isActive = activeDay === day;
+                return (
+                  <button
+                    key={day}
+                    data-day={day}
+                    className={`nav-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => { setActiveDay(day); openCard(day); }}
+                  >
+                    <div className="nav-btn-color-bar" style={{ backgroundColor: group.color }} />
+                    {day}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 };
 
-const RegionLegend: React.FC = () => (
-  <div className="region-legend">
-    {Object.entries(regionColors).map(([name, color]) => (
-      <div key={name} className="legend-item">
-        <span className="legend-dot" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }} />
-        {name}
-      </div>
-    ))}
-  </div>
-);
 
 const _vbMap: Record<number,string> = {
   1:"0 0 200 120",2:"0 0 200 200",3:"0 0 240 90",4:"0 0 200 200",
@@ -924,6 +956,63 @@ const ArtVignette: React.FC<{ day: number }> = ({ day }) => {
   );
 };
 
+// Small per-type vignette SVG (floats right in each activity)
+const typeVignettePaths: Record<string, React.ReactNode> = {
+  hotel: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 44 L12 28 L36 20 L60 28 L60 44 Z" fill="#e8dfc8" fillOpacity="0.5"/>
+      <rect x="24" y="32" width="24" height="12" fill="#c4a878" fillOpacity="0.4"/>
+      <path d="M36 44 L36 34" strokeWidth="1.2"/>
+      <path d="M8 28 L36 14 L64 28" strokeWidth="2.2"/>
+    </g>
+  ),
+  restaurant: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M15 46 Q15 30 36 30 Q57 30 57 46 Z" fill="#e8dfc8" fillOpacity="0.5"/>
+      <path d="M12 48 L60 48" strokeWidth="2.2"/>
+      <path d="M25 18 L24 30 M36 16 L36 30 M47 18 L48 30" strokeWidth="1.6"/>
+    </g>
+  ),
+  museum: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 26 L36 12 L64 26 Z" fill="#e8dfc8" fillOpacity="0.6"/>
+      <line x1="18" y1="26" x2="18" y2="48" strokeWidth="2.2"/>
+      <line x1="36" y1="26" x2="36" y2="48" strokeWidth="2.2"/>
+      <line x1="54" y1="26" x2="54" y2="48" strokeWidth="2.2"/>
+      <line x1="10" y1="48" x2="62" y2="48" strokeWidth="2.2"/>
+      <line x1="10" y1="26" x2="62" y2="26"/>
+    </g>
+  ),
+  shop: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="14" y="28" width="44" height="22" rx="3" fill="#e8dfc8" fillOpacity="0.5"/>
+      <path d="M22 28 Q22 18 36 18 Q50 18 50 28"/>
+      <circle cx="36" cy="38" r="4" fill="#c4a878" fillOpacity="0.6"/>
+    </g>
+  ),
+  transit: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 36 L54 36 L64 28 L54 20 L8 20 Z" fill="#e8dfc8" fillOpacity="0.5"/>
+      <rect x="12" y="22" width="12" height="9" rx="2" fill="#7aafcc" fillOpacity="0.5"/>
+      <rect x="28" y="22" width="12" height="9" rx="2" fill="#7aafcc" fillOpacity="0.5"/>
+      <line x1="16" y1="36" x2="14" y2="44" strokeWidth="1.4"/>
+      <line x1="44" y1="36" x2="42" y2="44" strokeWidth="1.4"/>
+    </g>
+  ),
+  nature: (
+    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="36" y1="48" x2="36" y2="28"/>
+      <path d="M36 28 Q20 28 20 16 Q28 8 36 18 Q44 8 52 16 Q52 28 36 28" fill="#5c8050" fillOpacity="0.35"/>
+    </g>
+  ),
+};
+
+const ActivityTypeVignette: React.FC<{ type: string }> = ({ type }) => (
+  <svg className="activity-vignette" viewBox="0 0 72 56">
+    {typeVignettePaths[type] ?? typeVignettePaths.museum}
+  </svg>
+);
+
 const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, index }) => {
   const { activeDay, editMode, userEdits, updateActivityEdit, selectedActivity, selectActivity } = useStore();
   const dayHaikus = haikus[activeDay] || [];
@@ -934,14 +1023,11 @@ const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, in
   const displayTitle = editedTitle !== undefined ? editedTitle : activity.title;
   const displayHaiku = editedDesc !== undefined ? editedDesc : (dayHaikus[index] || "");
 
-  const handleClick = () => {
-    if (!editMode) selectActivity(savedKey, activity.lat, activity.lng);
-  };
+  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${activity.lat},${activity.lng}`;
 
   return (
     <div
       className="timeline-item"
-      onClick={handleClick}
       style={{
         cursor: editMode ? 'default' : 'pointer',
         borderLeft: isSelected ? '3px solid var(--rc)' : '3px solid transparent',
@@ -949,7 +1035,9 @@ const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, in
         transition: 'border-left 0.2s, background 0.2s',
         paddingLeft: '12px',
       }}
+      onClick={() => { if (!editMode) selectActivity(savedKey, activity.lat, activity.lng); }}
     >
+      <ActivityTypeVignette type={activity.type} />
       <span className="timeline-bullet" style={{ color: isSelected ? 'var(--rc)' : undefined }}>
         {isSelected ? '✦' : '🌿'}
       </span>
@@ -958,7 +1046,7 @@ const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, in
         contentEditable={editMode}
         suppressContentEditableWarning
         onBlur={(e) => updateActivityEdit(activeDay, index, 'title', e.currentTarget.innerText)}
-        className={`timeline-title focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1' : ''}`}
+        className="timeline-title focus:outline-none"
         style={{ color: isSelected ? 'var(--rc)' : undefined }}
       >
         {displayTitle}
@@ -967,10 +1055,16 @@ const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, in
         contentEditable={editMode}
         suppressContentEditableWarning
         onBlur={(e) => updateActivityEdit(activeDay, index, 'description', e.currentTarget.innerText)}
-        className={`timeline-desc focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1 mt-2' : ''}`}
+        className="timeline-desc focus:outline-none"
       >
         {displayHaiku}
       </p>
+      {!editMode && (
+        <a href={navUrl} target="_blank" rel="noopener noreferrer" className="navigate-btn"
+          onClick={e => e.stopPropagation()}>
+          ↗ Navigate
+        </a>
+      )}
     </div>
   );
 };
@@ -999,6 +1093,146 @@ const MealsSection: React.FC = () => {
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+// Document uploader (per day, base64 in localStorage)
+const DocUploader: React.FC<{ dayId: number }> = ({ dayId }) => {
+  const { documents, addDocument, removeDocument } = useStore();
+  const docs = documents[dayId] || [];
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        addDocument(dayId, { name: file.name, b64: reader.result as string, mime: file.type });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const openDoc = (doc: { b64: string; mime: string; name: string }) => {
+    const win = window.open();
+    if (!win) return;
+    if (doc.mime === 'application/pdf') {
+      win.document.write(`<iframe src="${doc.b64}" style="width:100%;height:100vh;border:none"/>`);
+    } else {
+      win.document.write(`<img src="${doc.b64}" style="max-width:100%"/>`);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '16px' }}>
+      <h5 style={{ fontFamily: 'var(--font-display)', fontSize: '0.68rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--rc)', marginBottom: '10px' }}>
+        📎 Documents & Confirmations
+      </h5>
+      <input ref={inputRef} type="file" accept=".pdf,.png,.jpg,.jpeg,.webp" multiple style={{ display: 'none' }}
+        onChange={e => handleFiles(e.target.files)} />
+      <button className="doc-upload-btn" onClick={() => inputRef.current?.click()}>
+        + Upload PDF or image
+      </button>
+      {docs.length > 0 && (
+        <div className="doc-list">
+          {docs.map((doc, idx) => (
+            <div key={idx} className="doc-item">
+              <span className="doc-item-name">📄 {doc.name}</span>
+              <div className="doc-item-actions">
+                <button className="doc-item-btn doc-item-view" onClick={() => openDoc(doc)}>View</button>
+                <button className="doc-item-btn doc-item-del" onClick={() => removeDocument(dayId, idx)}>Remove</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Full-day card modal (slide-up drawer)
+const DayCard: React.FC = () => {
+  const { cardDay, closeCard, reservations } = useStore();
+  if (cardDay === null) return null;
+
+  const meta    = dayMeta[cardDay];
+  const acts    = activities[cardDay] || [];
+  const dayMeals = meals[cardDay];
+  const region  = regionMap[cardDay];
+  const color   = regionColors[region];
+  const haiku   = haikus[cardDay] || [];
+  const res     = reservations[cardDay] || {};
+
+  const mealRows = [
+    { icon: '☀', label: 'Breakfast', text: dayMeals?.breakfast.text, booked: dayMeals?.breakfast.booked },
+    { icon: '◑', label: 'Lunch',     text: dayMeals?.lunch.text,     booked: dayMeals?.lunch.booked     },
+    { icon: '☽', label: 'Dinner',    text: dayMeals?.dinner.text,    booked: dayMeals?.dinner.booked    },
+  ];
+
+  return (
+    <div className="day-card-overlay" onClick={closeCard}>
+      <div className="day-card" style={{ '--rc': color } as React.CSSProperties} onClick={e => e.stopPropagation()}>
+        <button className="day-card-close" onClick={closeCard}>✕</button>
+
+        <div className="day-card-region">{region} · Day {cardDay}</div>
+        <div className="day-card-title">{meta.title.replace(/^Day \d+: /, '')}</div>
+        <div className="day-card-lodging">🏨 {meta.lodging}</div>
+
+        {/* Activities */}
+        <div className="day-card-section-title">Itinerary</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+          {acts.map((act, i) => (
+            <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+              <div style={{ flexShrink: 0, width: '56px', height: '44px' }}>
+                <ActivityTypeVignette type={act.type} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: color, display: 'block', marginBottom: '2px' }}>{act.time}</span>
+                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1rem', color: 'var(--ink)', marginBottom: '3px' }}>{act.title}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', fontStyle: 'italic', color: 'var(--ink-fade)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{haiku[i] || ''}</div>
+                <a href={`https://www.google.com/maps/dir/?api=1&destination=${act.lat},${act.lng}`} target="_blank" rel="noopener noreferrer" className="navigate-btn" style={{ marginTop: '6px' }}>
+                  ↗ Navigate
+                </a>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Meals */}
+        <div className="day-card-section-title">Today's Table</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {mealRows.map(m => (
+            <div key={m.label} className={`meal-row${m.booked ? ' booked' : ''}`}>
+              <div className="meal-label-col">
+                <span>{m.icon}</span>
+                <span className="meal-type">{m.label}</span>
+              </div>
+              <span className="meal-text">{m.text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Reservation details */}
+        {(res.hotelConfirmation || res.hotelAddress || res.transportRef || (res.restaurantBookings?.length ?? 0) > 0) && (
+          <>
+            <div className="day-card-section-title">Booking Details</div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', color: 'var(--ink-fade)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {res.hotelConfirmation && <div>🏨 Confirmation: <strong style={{ color: 'var(--ink)' }}>{res.hotelConfirmation}</strong></div>}
+              {res.hotelAddress && <div>📍 <a href={`https://maps.google.com/?q=${encodeURIComponent(res.hotelAddress)}`} target="_blank" rel="noopener noreferrer" style={{ color: color }}>{res.hotelAddress}</a></div>}
+              {res.hotelPhone && <div>📞 <a href={`tel:${res.hotelPhone}`} style={{ color: color }}>{res.hotelPhone}</a></div>}
+              {res.transportRef && <div>🚄 Transport ref: <strong style={{ color: 'var(--ink)' }}>{res.transportRef}</strong></div>}
+              {(res.restaurantBookings || []).map((b, i) => (
+                <div key={i}>🍽 {b.name} · {b.time}{b.notes ? ` — ${b.notes}` : ''}</div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Documents */}
+        <div className="day-card-section-title">Documents</div>
+        <DocUploader dayId={cardDay} />
       </div>
     </div>
   );
@@ -1241,7 +1475,7 @@ const App: React.FC = () => {
         <AmbientLayer />
         <Header />
         <DayNav />
-        <RegionLegend />
+        {/* region groups now shown in DayNav */}
         <main className="main-content">
           <section className="journal-pane-wrapper" style={{ borderRight: '1px solid var(--paper-fold)', boxShadow: editMode ? 'inset 0 0 0 2px var(--amber)' : 'none' }}>
             <JournalPane />
@@ -1251,6 +1485,7 @@ const App: React.FC = () => {
           </section>
         </main>
         <EditModeToggle />
+        <DayCard />
       </div>
     </APIProvider>
   );
