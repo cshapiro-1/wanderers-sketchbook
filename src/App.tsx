@@ -1318,6 +1318,156 @@ const DocUploader: React.FC<{ dayId: number }> = ({ dayId }) => {
 };
 
 // Full-day card modal (slide-up drawer)
+// ── Day schedule timeline ─────────────────────────────────────────────────
+function parseTimeHours(str: string): number {
+  if (!str) return 12;
+  const lower = str.toLowerCase();
+  if (lower.includes('afternoon') || lower.includes('transit baseline')) return 13.5;
+  if (lower.includes('morning') || lower.includes('home base')) return 8;
+  if (lower.includes('evening') || lower.includes('return')) return 21;
+  const m = str.match(/(\d{1,2}):(\d{2})\s*(am|pm)/i);
+  if (!m) return 12;
+  let h = parseInt(m[1]);
+  const min = parseInt(m[2]);
+  const period = m[3].toUpperCase();
+  if (period === 'PM' && h !== 12) h += 12;
+  if (period === 'AM' && h === 12) h = 0;
+  return h + min / 60;
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  hotel:'#c03828', restaurant:'#c87e18', museum:'#5878a0',
+  shop:'#4a7848', transit:'#388888', nature:'#5c8050',
+};
+
+const DayScheduleTimeline: React.FC<{ day: number; color: string; compact?: boolean }> = ({ day, color, compact }) => {
+  const acts = activities[day] || [];
+  const hotel = hotelAnchors[day];
+
+  type Stop = { title: string; type: string; h: number };
+  const stops: Stop[] = [];
+  if (hotel) stops.push({ title: hotel.name, type: 'hotel', h: 8 });
+  acts.forEach(a => stops.push({ title: a.title, type: a.type, h: parseTimeHours(a.time) }));
+  if (hotel?.loop) stops.push({ title: hotel.name, type: 'hotel', h: 22 });
+  stops.sort((a, b) => a.h - b.h);
+
+  const DAY_START = 7, DAY_END = 23, SPAN = DAY_END - DAY_START;
+  const pct = (h: number) => Math.min(100, Math.max(0, ((h - DAY_START) / SPAN) * 100));
+
+  // Pace metric: total "active" hours (sum of gaps ≤ 3h between activities)
+  const busySlots = stops.length - 1;
+  const pace = busySlots >= 4 ? 'packed' : busySlots >= 2 ? 'active' : 'relaxed';
+  const paceLabel = { packed: '⚡ Packed', active: '◈ Active', relaxed: '〜 Leisurely' }[pace];
+  const paceColor = { packed: '#b84428', active: '#c87e18', relaxed: '#4a7848' }[pace];
+
+  const axisHours = compact ? [8, 12, 17, 21] : [7, 9, 12, 15, 18, 21, 23];
+  const fmtH = (h: number) => h === 12 ? '12pm' : h < 12 ? `${h}am` : `${h - 12}pm`;
+
+  const trackH = compact ? 36 : 52;
+  const dotR = compact ? 7 : 9;
+  const labelOffset = compact ? 16 : 22;
+
+  return (
+    <div style={{ userSelect: 'none' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: compact ? '8px' : '12px' }}>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.65rem', letterSpacing: '2.5px', textTransform: 'uppercase', color, opacity: 0.8 }}>
+          Day at a Glance
+        </span>
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: compact ? '0.68rem' : '0.75rem', fontWeight: 700, color: paceColor }}>
+          {paceLabel}
+        </span>
+      </div>
+
+      {/* Timeline track */}
+      <div style={{ position: 'relative', height: `${trackH}px`, marginBottom: '18px' }}>
+        {/* Base track */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0,
+          top: `${trackH / 2 - 2}px`, height: '4px',
+          background: 'var(--paper-fold)', borderRadius: '2px',
+        }}/>
+
+        {/* Gap fills — darker = tighter schedule */}
+        {stops.slice(0, -1).map((s, i) => {
+          const x1 = pct(s.h), x2 = pct(stops[i + 1].h);
+          const gap = stops[i + 1].h - s.h;
+          const opacity = gap <= 1.5 ? 0.55 : gap <= 3 ? 0.28 : 0.1;
+          return (
+            <div key={i} style={{
+              position: 'absolute',
+              left: `${x1}%`, width: `${Math.max(0, x2 - x1)}%`,
+              top: `${trackH / 2 - 4}px`, height: '8px',
+              background: color, opacity, borderRadius: '2px',
+              transition: 'opacity 0.3s',
+            }}/>
+          );
+        })}
+
+        {/* Activity markers */}
+        {stops.map((s, i) => {
+          const x = pct(s.h);
+          const tc = TYPE_COLORS[s.type] || color;
+          const above = i % 2 === 0;
+          const shortTitle = s.title.split(/[\s,·]/)[0];
+          return (
+            <div key={i} style={{ position: 'absolute', left: `${x}%`, transform: 'translateX(-50%)' }}>
+              {/* Dot */}
+              <div style={{
+                width: `${dotR * 2}px`, height: `${dotR * 2}px`,
+                borderRadius: '50%', background: tc,
+                border: '2.5px solid var(--paper)',
+                position: 'absolute',
+                top: `${trackH / 2 - dotR}px`,
+                left: `-${dotR}px`,
+                boxShadow: '0 1px 5px rgba(0,0,0,0.22)',
+              }}/>
+              {/* Label */}
+              {!compact && (
+                <div style={{
+                  position: 'absolute',
+                  top: above ? `${trackH / 2 - dotR - labelOffset}px` : `${trackH / 2 + dotR + 4}px`,
+                  left: '-28px', width: '56px',
+                  textAlign: 'center',
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '0.6rem', fontWeight: 600,
+                  color: tc, lineHeight: 1.2,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {shortTitle}
+                </div>
+              )}
+              {/* Tick */}
+              <div style={{
+                position: 'absolute',
+                left: '-1px', width: '2px',
+                top: above
+                  ? `${trackH / 2 - dotR - 4}px`
+                  : `${trackH / 2 + dotR}px`,
+                height: '4px',
+                background: tc, opacity: 0.5,
+              }}/>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Hour axis */}
+      <div style={{ position: 'relative', height: '14px' }}>
+        {axisHours.map(h => (
+          <span key={h} style={{
+            position: 'absolute',
+            left: `${pct(h)}%`, transform: 'translateX(-50%)',
+            fontFamily: 'var(--font-mono)', fontSize: '0.58rem',
+            color: 'var(--ink-light)', opacity: 0.6,
+          }}>
+            {fmtH(h)}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const DayCard: React.FC = () => {
   const { cardDay, closeCard, reservations } = useStore();
   if (cardDay === null) return null;
@@ -1344,6 +1494,11 @@ const DayCard: React.FC = () => {
         <div className="day-card-region">{region} · Day {cardDay}</div>
         <div className="day-card-title">{meta.title.replace(/^Day \d+: /, '')}</div>
         <div className="day-card-lodging">🏨 {meta.lodging}</div>
+
+        {/* Schedule timeline */}
+        <div style={{ margin: '20px 0 8px', padding: '18px 20px 14px', background: 'rgba(0,0,0,0.03)', borderRadius: '6px', border: '1px solid var(--paper-fold)' }}>
+          <DayScheduleTimeline day={cardDay} color={color} />
+        </div>
 
         {/* Activities */}
         <div className="day-card-section-title">Itinerary</div>
@@ -1502,6 +1657,12 @@ const JournalPane: React.FC = () => {
           </div>
           <div style={{ height: '2px', width: '100%', background: `linear-gradient(to right, ${color}, #cdbf9c, transparent)`, marginTop: '8px' }} />
         </div>
+
+        {/* Compact schedule timeline */}
+        <div style={{ padding: '14px 16px 10px', background: 'rgba(0,0,0,0.025)', borderRadius: '5px', border: '1px solid var(--paper-fold)' }}>
+          <DayScheduleTimeline day={activeDay} color={color} compact />
+        </div>
+
         <div className="timeline-container">{elements}</div>
         <MealsSection />
         <ReservationsPanel />
