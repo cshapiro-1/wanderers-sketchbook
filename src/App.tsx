@@ -57,11 +57,13 @@ interface TravelStore {
   editMode: boolean;
   userEdits: UserEdits;
   reservations: Record<number, Reservation>;
+  selectedActivity: { key: string; lat: number; lng: number } | null;
   setActiveDay: (day: number) => void;
   toggleEditMode: () => void;
   updateActivityEdit: (dayId: number, actIndex: number, field: 'title' | 'description', val: string) => void;
   updateMealEdit: (dayId: number, mealType: 'breakfast' | 'lunch' | 'dinner', val: string) => void;
   updateReservation: (dayId: number, fields: Partial<Reservation>) => void;
+  selectActivity: (key: string, lat: number, lng: number) => void;
 }
 
 const EDITS_KEY = 'wanderer_edits_v1';
@@ -72,8 +74,10 @@ const useStore = create<TravelStore>((set) => ({
   editMode: false,
   userEdits: JSON.parse(localStorage.getItem(EDITS_KEY) || '{"activities":{},"meals":{}}'),
   reservations: JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '{}'),
+  selectedActivity: null,
 
-  setActiveDay: (day) => set({ activeDay: day }),
+  setActiveDay: (day) => set({ activeDay: day, selectedActivity: null }),
+  selectActivity: (key, lat, lng) => set({ selectedActivity: { key, lat, lng } }),
   toggleEditMode: () => set((state) => ({ editMode: !state.editMode })),
 
   updateActivityEdit: (dayId, actIndex, field, val) => set((state) => {
@@ -921,20 +925,52 @@ const ArtVignette: React.FC<{ day: number }> = ({ day }) => {
 };
 
 const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, index }) => {
-  const { activeDay, editMode, userEdits, updateActivityEdit } = useStore();
+  const { activeDay, editMode, userEdits, updateActivityEdit, selectedActivity, selectActivity } = useStore();
   const dayHaikus = haikus[activeDay] || [];
   const savedKey = `${activeDay}_${index}`;
+  const isSelected = selectedActivity?.key === savedKey;
   const editedTitle = userEdits.activities[savedKey]?.title;
   const editedDesc = userEdits.activities[savedKey]?.description;
   const displayTitle = editedTitle !== undefined ? editedTitle : activity.title;
   const displayHaiku = editedDesc !== undefined ? editedDesc : (dayHaikus[index] || "");
 
+  const handleClick = () => {
+    if (!editMode) selectActivity(savedKey, activity.lat, activity.lng);
+  };
+
   return (
-    <div className="timeline-item">
-      <span className="timeline-bullet">🌿</span>
+    <div
+      className="timeline-item"
+      onClick={handleClick}
+      style={{
+        cursor: editMode ? 'default' : 'pointer',
+        borderLeft: isSelected ? '3px solid var(--rc)' : '3px solid transparent',
+        background: isSelected ? 'rgba(0,0,0,0.04)' : undefined,
+        transition: 'border-left 0.2s, background 0.2s',
+        paddingLeft: '12px',
+      }}
+    >
+      <span className="timeline-bullet" style={{ color: isSelected ? 'var(--rc)' : undefined }}>
+        {isSelected ? '✦' : '🌿'}
+      </span>
       <span className="timeline-time">{activity.time}</span>
-      <h3 contentEditable={editMode} suppressContentEditableWarning onBlur={(e) => updateActivityEdit(activeDay, index, 'title', e.currentTarget.innerText)} className={`timeline-title focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1' : ''}`}>{displayTitle}</h3>
-      <p contentEditable={editMode} suppressContentEditableWarning onBlur={(e) => updateActivityEdit(activeDay, index, 'description', e.currentTarget.innerText)} className={`timeline-desc focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1 mt-2' : ''}`}>{displayHaiku}</p>
+      <h3
+        contentEditable={editMode}
+        suppressContentEditableWarning
+        onBlur={(e) => updateActivityEdit(activeDay, index, 'title', e.currentTarget.innerText)}
+        className={`timeline-title focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1' : ''}`}
+        style={{ color: isSelected ? 'var(--rc)' : undefined }}
+      >
+        {displayTitle}
+      </h3>
+      <p
+        contentEditable={editMode}
+        suppressContentEditableWarning
+        onBlur={(e) => updateActivityEdit(activeDay, index, 'description', e.currentTarget.innerText)}
+        className={`timeline-desc focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1 mt-2' : ''}`}
+      >
+        {displayHaiku}
+      </p>
     </div>
   );
 };
@@ -1089,49 +1125,48 @@ const getPinIconUrl = (type: string, color: string) => {
 
 const MapEngine: React.FC<{ activeDay: number }> = ({ activeDay }) => {
   const googleMap = useMap('travel_map');
-  const [markers, setMarkers] = useState<any[]>([]);
+  const { selectedActivity } = useStore();
+  const [markerData, setMarkerData] = useState<Array<{ marker: any; iw: any; lat: number; lng: number }>>([]);
   const [polyline, setPolyline] = useState<any>(null);
+  const openIwRef = React.useRef<any>(null);
 
+  // Rebuild markers when day changes
   useEffect(() => {
     if (!googleMap) return;
     const google = (window as any).google;
     if (!google) return;
 
-    markers.forEach(m => m.setMap(null));
+    markerData.forEach(({ marker }) => marker.setMap(null));
     if (polyline) polyline.setMap(null);
+    if (openIwRef.current) { openIwRef.current.close(); openIwRef.current = null; }
 
     const dayActs = activities[activeDay] || [];
     const hotel = hotelAnchors[activeDay];
     const pathCoordinates: any[] = [];
     const bounds = new google.maps.LatLngBounds();
-    const newMarkers: any[] = [];
+    const newMarkerData: typeof markerData = [];
 
-    if (hotel) {
-      const loc = { lat: hotel.lat, lng: hotel.lng };
+    const addPin = (loc: { lat: number; lng: number }, title: string, type: string, color: string) => {
       bounds.extend(loc);
       pathCoordinates.push(loc);
       const marker = new google.maps.Marker({
-        position: loc, map: googleMap, title: hotel.name,
-        icon: { url: getPinIconUrl('hotel', '#b83020'), scaledSize: new google.maps.Size(32, 32) }
+        position: loc, map: googleMap, title,
+        icon: { url: getPinIconUrl(type, color), scaledSize: new google.maps.Size(32, 32) }
       });
-      newMarkers.push(marker);
-    }
-
-    dayActs.forEach((act) => {
-      const loc = { lat: act.lat, lng: act.lng };
-      bounds.extend(loc);
-      pathCoordinates.push(loc);
-      const marker = new google.maps.Marker({
-        position: loc, map: googleMap, title: act.title,
-        icon: { url: getPinIconUrl(act.type, '#c87e18'), scaledSize: new google.maps.Size(32, 32) }
+      const iw = new google.maps.InfoWindow({ content: `<div style="font-family:serif;font-size:13px;padding:2px 4px"><strong>${title}</strong></div>` });
+      marker.addListener('click', () => {
+        if (openIwRef.current) openIwRef.current.close();
+        iw.open(googleMap, marker);
+        openIwRef.current = iw;
       });
-      newMarkers.push(marker);
-    });
+      newMarkerData.push({ marker, iw, lat: loc.lat, lng: loc.lng });
+    };
 
-    if (hotel && hotel.loop) {
-      pathCoordinates.push({ lat: hotel.lat, lng: hotel.lng });
-    }
-    setMarkers(newMarkers);
+    if (hotel) addPin({ lat: hotel.lat, lng: hotel.lng }, hotel.name, 'hotel', '#b83020');
+    dayActs.forEach(act => addPin({ lat: act.lat, lng: act.lng }, act.title, act.type, '#c87e18'));
+    if (hotel && hotel.loop) pathCoordinates.push({ lat: hotel.lat, lng: hotel.lng });
+
+    setMarkerData(newMarkerData);
 
     if (pathCoordinates.length > 1) {
       const newPolyline = new google.maps.Polyline({
@@ -1141,10 +1176,30 @@ const MapEngine: React.FC<{ activeDay: number }> = ({ activeDay }) => {
       });
       setPolyline(newPolyline);
     }
-    if (pathCoordinates.length > 0) {
-      googleMap.fitBounds(bounds, 50);
-    }
+    if (pathCoordinates.length > 0) googleMap.fitBounds(bounds, 50);
   }, [activeDay, googleMap]);
+
+  // Focus marker when selectedActivity changes
+  useEffect(() => {
+    if (!googleMap || !selectedActivity) return;
+    const google = (window as any).google;
+    if (!google) return;
+
+    const { lat, lng } = selectedActivity;
+    googleMap.panTo({ lat, lng });
+    googleMap.setZoom(16);
+
+    if (openIwRef.current) { openIwRef.current.close(); openIwRef.current = null; }
+
+    markerData.forEach(({ marker, iw, lat: mLat, lng: mLng }) => {
+      if (Math.abs(mLat - lat) < 0.002 && Math.abs(mLng - lng) < 0.002) {
+        marker.setAnimation(google.maps.Animation.BOUNCE);
+        setTimeout(() => marker.setAnimation(null), 1400);
+        iw.open(googleMap, marker);
+        openIwRef.current = iw;
+      }
+    });
+  }, [selectedActivity]);
 
   return null;
 };
