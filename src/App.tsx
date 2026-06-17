@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { create } from 'zustand';
 import { APIProvider, Map, useMap, MapControl, ControlPosition } from '@vis.gl/react-google-maps';
-import { Plus, Trash, BookOpen, ChevronDown, ChevronUp, MapPin, Edit3, Check } from 'lucide-react';
+import { Plus, Trash, BookOpen, ChevronDown, ChevronUp, Edit3, Check } from 'lucide-react';
 
 // --- TS INTERFACES ---
 export interface Activity {
@@ -363,7 +363,6 @@ const Header: React.FC = () => (
       <h1>The Wanderer's Sketchbook</h1>
       <p>An 18-Day Journey Through Landscapes, Flavors, and Hidden Valleys</p>
     </div>
-    {/* Robust, explicitly sized SVG to guarantee watermark scales perfectly */}
     <svg width="84" height="84" style={{ position: 'absolute', right: '32px', top: '12px', opacity: 0.07, color: '#1e1208', pointerEvents: 'none' }} viewBox="0 0 100 100">
       <ellipse cx="50" cy="55" rx="32" ry="26" fill="currentColor" />
       <ellipse cx="40" cy="24" rx="5" ry="12" fill="currentColor" transform="rotate(-15 40 24)" />
@@ -430,7 +429,7 @@ const ArtVignette: React.FC<{ day: number }> = ({ day }) => {
             <path d="M 20 50 Q 20 90 60 90 Q 100 90 100 50 Z" fill="#f2e8d0" />
             <path d="M 15 50 L 105 50" strokeWidth="3" />
             <path d="M 40 90 L 40 95 L 80 95 L 80 90" />
-            <path d="M 30 50 Q 35 38 40 50 Q 45 38 50 50 Q 55 38 60 50" strokeWidth="1.5" />
+            <path d="M 30 50 Q 35 38 40 50 Q 45 38 50 50 Q 55 38 60 50 Q 65 38 70 50" strokeWidth="1.5" />
             <path className="steam-line" d="M 45 25 Q 42 15 47 5" strokeWidth="1.5" opacity="0.6" style={{ animationDelay: '0.2s' }} />
             <path className="steam-line" d="M 60 25 Q 58 12 62 5" strokeWidth="1.5" opacity="0.6" style={{ animationDelay: '0.8s' }} />
           </g>
@@ -552,10 +551,16 @@ const ReservationsPanel: React.FC = () => {
               <button onClick={addBooking} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--rc)' }}><Plus style={{ width: '14px', height: '14px' }} /> Add</button>
             </div>
             {(res.restaurantBookings || []).map((booking, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '8px', backgroundColor: '#f2e8d0', padding: '12px', borderRadius: '4px', border: '1px solid #cdbf9c' }}>
-                <input type="text" placeholder="Name" value={booking.name} onChange={(e) => updateBooking(idx, 'name', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '33%' }} />
-                <input type="text" placeholder="Time" value={booking.time} onChange={(e) => updateBooking(idx, 'time', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '33%' }} />
-                <input type="text" placeholder="Notes" value={booking.notes} onChange={(e) => updateBooking(idx, 'notes', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '33%' }} />
+              <div key={idx} style={{ display: 'flex', gap: '8px', backgroundColor: '#f2e8d0', padding: '12px', borderRadius: '4px', border: '1px solid #cdbf9c', alignItems: 'center' }}>
+                <input type="text" placeholder="Name" value={booking.name} onChange={(e) => updateBooking(idx, 'name', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <input type="text" placeholder="Time" value={booking.time} onChange={(e) => updateBooking(idx, 'time', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <input type="text" placeholder="Notes" value={booking.notes} onChange={(e) => updateBooking(idx, 'notes', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <button onClick={() => {
+                  const list = (res.restaurantBookings || []).filter((_, i) => i !== idx);
+                  updateReservation(activeDay, { restaurantBookings: list });
+                }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b83020', padding: '4px' }}>
+                  <Trash style={{ width: '16px', height: '16px' }} />
+                </button>
               </div>
             ))}
           </div>
