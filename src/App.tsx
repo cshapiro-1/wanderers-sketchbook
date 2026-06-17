@@ -57,14 +57,11 @@ interface DocEntry { name: string; b64: string; mime: string; }
 interface TravelStore {
   activeDay: number;
   editMode: boolean;
-  cardDay: number | null;
   userEdits: UserEdits;
   reservations: Record<number, Reservation>;
   documents: Record<number, DocEntry[]>;
   selectedActivity: { key: string; lat: number; lng: number } | null;
   setActiveDay: (day: number) => void;
-  openCard: (day: number) => void;
-  closeCard: () => void;
   toggleEditMode: () => void;
   updateActivityEdit: (dayId: number, actIndex: number, field: 'title' | 'description', val: string) => void;
   updateMealEdit: (dayId: number, mealType: 'breakfast' | 'lunch' | 'dinner', val: string) => void;
@@ -80,15 +77,12 @@ const RESERVATIONS_KEY = 'wanderer_reservations_v1';
 const useStore = create<TravelStore>((set) => ({
   activeDay: 1,
   editMode: false,
-  cardDay: null,
   userEdits: JSON.parse(localStorage.getItem(EDITS_KEY) || '{"activities":{},"meals":{}}'),
   reservations: JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '{}'),
   documents: JSON.parse(localStorage.getItem('wanderer_docs_v1') || '{}'),
   selectedActivity: null,
 
-  setActiveDay: (day) => set({ activeDay: day, selectedActivity: null, cardDay: null }),
-  openCard: (day) => set({ cardDay: day }),
-  closeCard: () => set({ cardDay: null }),
+  setActiveDay: (day) => set({ activeDay: day, selectedActivity: null }),
   selectActivity: (key, lat, lng) => set({ selectedActivity: { key, lat, lng } }),
 
   addDocument: (dayId, entry) => set((state) => {
@@ -418,7 +412,7 @@ const regionGroups = [
 ];
 
 const DayNav: React.FC = () => {
-  const { activeDay, setActiveDay, openCard } = useStore();
+  const { activeDay, setActiveDay } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -440,7 +434,7 @@ const DayNav: React.FC = () => {
                     key={day}
                     data-day={day}
                     className={`nav-btn ${isActive ? 'active' : ''}`}
-                    onClick={() => { setActiveDay(day); openCard(day); }}
+                    onClick={() => setActiveDay(day)}
                   >
                     <div className="nav-btn-color-bar" style={{ backgroundColor: group.color }} />
                     {day}
@@ -1340,6 +1334,83 @@ const TYPE_COLORS: Record<string, string> = {
   shop:'#4a7848', transit:'#388888', nature:'#5c8050',
 };
 
+const ReservationsPanel: React.FC = () => {
+  const { activeDay, reservations, updateReservation } = useStore();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const res = reservations[activeDay] || {};
+
+  const handleField = (field: string, val: string) =>
+    updateReservation(activeDay, { [field]: val });
+
+  const addBooking = () =>
+    updateReservation(activeDay, {
+      restaurantBookings: [...(res.restaurantBookings || []), { name: '', time: '', notes: '' }]
+    });
+
+  const updateBooking = (idx: number, key: string, val: string) => {
+    const list = [...(res.restaurantBookings || [])];
+    (list[idx] as any)[key] = val;
+    updateReservation(activeDay, { restaurantBookings: list });
+  };
+
+  const removeBooking = (idx: number) =>
+    updateReservation(activeDay, {
+      restaurantBookings: (res.restaurantBookings || []).filter((_, i) => i !== idx)
+    });
+
+  const fieldStyle = { backgroundColor: '#f2e8d0', border: '1px solid #cdbf9c', padding: '7px 10px', borderRadius: '4px', outline: 'none', fontFamily: 'var(--font-body)', fontSize: '0.88rem', width: '100%' };
+
+  return (
+    <div style={{ marginTop: '32px', border: '1px solid var(--paper-fold)', borderRadius: '6px', background: 'rgba(230,216,190,0.3)' }}>
+      <button
+        onClick={() => setIsOpen(o => !o)}
+        style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-display)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--ink-fade)', border: 'none', background: 'transparent', cursor: 'pointer' }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BookOpen style={{ width: '15px', height: '15px' }} /> Bookings & Documents
+        </span>
+        {isOpen ? <ChevronUp style={{ width: '15px', height: '15px' }} /> : <ChevronDown style={{ width: '15px', height: '15px' }} />}
+      </button>
+
+      {isOpen && (
+        <div style={{ padding: '16px', borderTop: '1px solid var(--paper-fold)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.68rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--rc)', marginBottom: '10px' }}>🏨 Hotel / Ryokan</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <input placeholder="Confirmation #" value={res.hotelConfirmation || ''} onChange={e => handleField('hotelConfirmation', e.target.value)} style={fieldStyle} />
+              <input placeholder="Check-in time"  value={res.hotelCheckIn    || ''} onChange={e => handleField('hotelCheckIn',    e.target.value)} style={fieldStyle} />
+              <input placeholder="Address"        value={res.hotelAddress    || ''} onChange={e => handleField('hotelAddress',    e.target.value)} style={{...fieldStyle, gridColumn:'1/-1'}} />
+              <input placeholder="Phone"          value={res.hotelPhone      || ''} onChange={e => handleField('hotelPhone',      e.target.value)} style={fieldStyle} />
+              <input placeholder="Transport ref"  value={res.transportRef    || ''} onChange={e => handleField('transportRef',    e.target.value)} style={fieldStyle} />
+            </div>
+          </div>
+
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '0.68rem', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--rc)' }}>🍽 Restaurant Bookings</p>
+              <button onClick={addBooking} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', border: 'none', background: 'none', cursor: 'pointer', color: 'var(--rc)', fontFamily: 'var(--font-display)' }}>
+                <Plus style={{ width: '13px', height: '13px' }} /> Add
+              </button>
+            </div>
+            {(res.restaurantBookings || []).map((b, i) => (
+              <div key={i} style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+                <input placeholder="Name" value={b.name}  onChange={e => updateBooking(i,'name', e.target.value)} style={{...fieldStyle, width:'35%'}} />
+                <input placeholder="Time" value={b.time}  onChange={e => updateBooking(i,'time', e.target.value)} style={{...fieldStyle, width:'20%'}} />
+                <input placeholder="Notes"value={b.notes} onChange={e => updateBooking(i,'notes',e.target.value)} style={{...fieldStyle, flex:1}} />
+                <button onClick={() => removeBooking(i)} style={{ border:'none', background:'none', cursor:'pointer', color:'var(--ghibli-red)', padding:'4px', flexShrink:0 }}>
+                  <Trash style={{ width:'14px', height:'14px' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <DocUploader dayId={activeDay} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const DayScheduleTimeline: React.FC<{ day: number; color: string; compact?: boolean }> = ({ day, color, compact }) => {
   const acts = activities[day] || [];
   const hotel = hotelAnchors[day];
@@ -1468,156 +1539,6 @@ const DayScheduleTimeline: React.FC<{ day: number; color: string; compact?: bool
   );
 };
 
-const DayCard: React.FC = () => {
-  const { cardDay, closeCard, reservations } = useStore();
-  if (cardDay === null) return null;
-
-  const meta    = dayMeta[cardDay];
-  const acts    = activities[cardDay] || [];
-  const dayMeals = meals[cardDay];
-  const region  = regionMap[cardDay];
-  const color   = regionColors[region];
-  const haiku   = haikus[cardDay] || [];
-  const res     = reservations[cardDay] || {};
-
-  const mealRows = [
-    { icon: '☀', label: 'Breakfast', text: dayMeals?.breakfast.text, booked: dayMeals?.breakfast.booked },
-    { icon: '◑', label: 'Lunch',     text: dayMeals?.lunch.text,     booked: dayMeals?.lunch.booked     },
-    { icon: '☽', label: 'Dinner',    text: dayMeals?.dinner.text,    booked: dayMeals?.dinner.booked    },
-  ];
-
-  return (
-    <div className="day-card-overlay" onClick={closeCard}>
-      <div className="day-card" style={{ '--rc': color } as React.CSSProperties} onClick={e => e.stopPropagation()}>
-        <button className="day-card-close" onClick={closeCard}>✕</button>
-
-        <div className="day-card-region">{region} · Day {cardDay}</div>
-        <div className="day-card-title">{meta.title.replace(/^Day \d+: /, '')}</div>
-        <div className="day-card-lodging">🏨 {meta.lodging}</div>
-
-        {/* Schedule timeline */}
-        <div style={{ margin: '20px 0 8px', padding: '18px 20px 14px', background: 'rgba(0,0,0,0.03)', borderRadius: '6px', border: '1px solid var(--paper-fold)' }}>
-          <DayScheduleTimeline day={cardDay} color={color} />
-        </div>
-
-        {/* Activities */}
-        <div className="day-card-section-title">Itinerary</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-          {acts.map((act, i) => (
-            <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{ flexShrink: 0, width: '140px', height: '85px' }}>
-                <ActivityTypeVignette type={act.type} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: color, display: 'block', marginBottom: '2px' }}>{act.time}</span>
-                <div style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '1rem', color: 'var(--ink)', marginBottom: '3px' }}>{act.title}</div>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', fontStyle: 'italic', color: 'var(--ink-fade)', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{haiku[i] || ''}</div>
-                <a href={`https://www.google.com/maps/dir/?api=1&destination=${act.lat},${act.lng}`} target="_blank" rel="noopener noreferrer" className="navigate-btn" style={{ marginTop: '6px' }}>
-                  ↗ Navigate
-                </a>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Meals */}
-        <div className="day-card-section-title">Today's Table</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {mealRows.map(m => (
-            <div key={m.label} className={`meal-row${m.booked ? ' booked' : ''}`}>
-              <div className="meal-label-col">
-                <span>{m.icon}</span>
-                <span className="meal-type">{m.label}</span>
-              </div>
-              <span className="meal-text">{m.text}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Reservation details */}
-        {(res.hotelConfirmation || res.hotelAddress || res.transportRef || (res.restaurantBookings?.length ?? 0) > 0) && (
-          <>
-            <div className="day-card-section-title">Booking Details</div>
-            <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.88rem', color: 'var(--ink-fade)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {res.hotelConfirmation && <div>🏨 Confirmation: <strong style={{ color: 'var(--ink)' }}>{res.hotelConfirmation}</strong></div>}
-              {res.hotelAddress && <div>📍 <a href={`https://maps.google.com/?q=${encodeURIComponent(res.hotelAddress)}`} target="_blank" rel="noopener noreferrer" style={{ color: color }}>{res.hotelAddress}</a></div>}
-              {res.hotelPhone && <div>📞 <a href={`tel:${res.hotelPhone}`} style={{ color: color }}>{res.hotelPhone}</a></div>}
-              {res.transportRef && <div>🚄 Transport ref: <strong style={{ color: 'var(--ink)' }}>{res.transportRef}</strong></div>}
-              {(res.restaurantBookings || []).map((b, i) => (
-                <div key={i}>🍽 {b.name} · {b.time}{b.notes ? ` — ${b.notes}` : ''}</div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Documents */}
-        <div className="day-card-section-title">Documents</div>
-        <DocUploader dayId={cardDay} />
-      </div>
-    </div>
-  );
-};
-
-const ReservationsPanel: React.FC = () => {
-  const { activeDay, reservations, updateReservation } = useStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const res: Reservation = reservations[activeDay] || {};
-
-  const handleInputChange = (field: keyof Reservation, value: string) => {
-    updateReservation(activeDay, { [field]: value });
-  };
-
-  const addBooking = () => {
-    const list = res.restaurantBookings || [];
-    updateReservation(activeDay, { restaurantBookings: [...list, { name: '', time: '', notes: '' }] });
-  };
-
-  const updateBooking = (idx: number, key: keyof RestaurantBooking, value: string) => {
-    const list = [...(res.restaurantBookings || [])];
-    list[idx] = { ...list[idx], [key]: value };
-    updateReservation(activeDay, { restaurantBookings: list });
-  };
-
-  return (
-    <div style={{ marginTop: '32px', border: '1px solid #cdbf9c', borderRadius: '4px', backgroundColor: '#e6d8be', opacity: 0.85 }}>
-      <button onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'Crimson Text, serif', fontSize: '14px', color: '#1e1208', border: 'none', background: 'transparent', cursor: 'pointer' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BookOpen style={{ width: '16px', height: '16px' }} />Offline Booking & Lodging Records</span>
-        {isOpen ? <ChevronUp style={{ width: '16px', height: '16px' }} /> : <ChevronDown style={{ width: '16px', height: '16px' }} />}
-      </button>
-      {isOpen && (
-        <div style={{ padding: '16px', borderTop: '1px solid #cdbf9c', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'Crimson Text, serif', fontSize: '14px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <h5 style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>🏨 Hotel / Ryokan Details</h5>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-              <input type="text" placeholder="Confirmation Code" value={res.hotelConfirmation || ''} onChange={(e) => handleInputChange('hotelConfirmation', e.target.value)} style={{ backgroundColor: '#f2e8d0', border: '1px solid #cdbf9c', padding: '8px', borderRadius: '4px', outline: 'none' }} />
-              <input type="text" placeholder="Full Hotel Address" value={res.hotelAddress || ''} onChange={(e) => handleInputChange('hotelAddress', e.target.value)} style={{ backgroundColor: '#f2e8d0', border: '1px solid #cdbf9c', padding: '8px', borderRadius: '4px', outline: 'none' }} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h5 style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>🍽 Dining Reservations</h5>
-              <button onClick={addBooking} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--rc)' }}><Plus style={{ width: '14px', height: '14px' }} /> Add</button>
-            </div>
-            {(res.restaurantBookings || []).map((booking, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '8px', backgroundColor: '#f2e8d0', padding: '12px', borderRadius: '4px', border: '1px solid #cdbf9c', alignItems: 'center' }}>
-                <input type="text" placeholder="Name" value={booking.name} onChange={(e) => updateBooking(idx, 'name', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
-                <input type="text" placeholder="Time" value={booking.time} onChange={(e) => updateBooking(idx, 'time', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
-                <input type="text" placeholder="Notes" value={booking.notes} onChange={(e) => updateBooking(idx, 'notes', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
-                <button onClick={() => {
-                  const list = (res.restaurantBookings || []).filter((_, i) => i !== idx);
-                  updateReservation(activeDay, { restaurantBookings: list });
-                }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b83020', padding: '4px' }}>
-                  <Trash style={{ width: '16px', height: '16px' }} />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const JournalPane: React.FC = () => {
   const { activeDay } = useStore();
   const region = regionMap[activeDay];
@@ -1660,7 +1581,7 @@ const JournalPane: React.FC = () => {
 
         {/* Compact schedule timeline */}
         <div style={{ padding: '14px 16px 10px', background: 'rgba(0,0,0,0.025)', borderRadius: '5px', border: '1px solid var(--paper-fold)' }}>
-          <DayScheduleTimeline day={activeDay} color={color} compact />
+          <DayScheduleTimeline day={activeDay} color={color} />
         </div>
 
         <div className="timeline-container">{elements}</div>
@@ -1811,7 +1732,6 @@ const App: React.FC = () => {
           </section>
         </main>
         <EditModeToggle />
-        <DayCard />
       </div>
     </APIProvider>
   );
