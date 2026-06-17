@@ -107,16 +107,7 @@ body {
 }
 .navigate-btn:hover { background:var(--rc); color:white; }
 
-/* Per-activity type vignette */
-.activity-vignette {
-  float: right;
-  clear: right;
-  width: 185px;
-  height: 112px;
-  margin: 0 0 12px 18px;
-  mask-image: radial-gradient(ellipse 88% 82% at 50% 50%, black 15%, transparent 100%);
-  -webkit-mask-image: radial-gradient(ellipse 88% 82% at 50% 50%, black 15%, transparent 100%);
-}
+
 
 /* ── Meals ───────────────────────────────────────────────── */
 .meals-container { margin-top:32px; padding-top:24px; border-top:1px dashed var(--paper-fold); }
