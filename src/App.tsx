@@ -959,56 +959,221 @@ const ArtVignette: React.FC<{ day: number }> = ({ day }) => {
 // Small per-type vignette SVG (floats right in each activity)
 const typeVignettePaths: Record<string, React.ReactNode> = {
   hotel: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 44 L12 28 L36 20 L60 28 L60 44 Z" fill="#e8dfc8" fillOpacity="0.5"/>
-      <rect x="24" y="32" width="24" height="12" fill="#c4a878" fillOpacity="0.4"/>
-      <path d="M36 44 L36 34" strokeWidth="1.2"/>
-      <path d="M8 28 L36 14 L64 28" strokeWidth="2.2"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Sky wash */}
+      <rect x="0" y="0" width="200" height="120" fill="#7aafcc" fillOpacity="0.08"/>
+      {/* Ground */}
+      <path d="M0 105 L200 105 L200 120 L0 120 Z" fill="#c8bfa0" fillOpacity="0.35"/>
+      {/* Garden stone path */}
+      <ellipse cx="100" cy="110" rx="18" ry="5" fill="#c8bfa0" fillOpacity="0.5"/>
+      <ellipse cx="72" cy="113" rx="10" ry="3" fill="#c8bfa0" fillOpacity="0.4"/>
+      {/* Stone lantern */}
+      <rect x="152" y="72" width="12" height="10" rx="1" fill="#e8dfc8" stroke="#9c8340" strokeWidth="1.5"/>
+      <rect x="149" y="70" width="18" height="4" rx="1" fill="#c4a878" stroke="#9c8340" strokeWidth="1"/>
+      <rect x="153" y="82" width="10" height="18" fill="#9c8340" fillOpacity="0.5"/>
+      <ellipse cx="158" cy="77" rx="4" ry="3" fill="#e8a830" fillOpacity="0.5"/>
+      {/* Main inn building */}
+      <rect x="30" y="55" width="110" height="50" fill="#e8dfc8" fillOpacity="0.6" stroke="#9c8340" strokeWidth="1.8"/>
+      {/* Shoji screens */}
+      <rect x="38" y="62" width="18" height="28" fill="#f5edd8" fillOpacity="0.7" stroke="#9c8340" strokeWidth="1"/>
+      <line x1="47" y1="62" x2="47" y2="90" stroke="#9c8340" strokeWidth="0.8"/>
+      <line x1="38" y1="76" x2="56" y2="76" stroke="#9c8340" strokeWidth="0.8"/>
+      <rect x="62" y="62" width="18" height="28" fill="#f5edd8" fillOpacity="0.7" stroke="#9c8340" strokeWidth="1"/>
+      <line x1="71" y1="62" x2="71" y2="90" stroke="#9c8340" strokeWidth="0.8"/>
+      <line x1="62" y1="76" x2="80" y2="76" stroke="#9c8340" strokeWidth="0.8"/>
+      {/* Entrance door */}
+      <rect x="94" y="72" width="22" height="33" rx="2" fill="#9c6c30" fillOpacity="0.6" stroke="#6b4010" strokeWidth="1.5"/>
+      {/* Curved roof – lower */}
+      <path d="M18 56 Q100 38 182 56 L175 62 Q100 44 25 62 Z" fill="#5c4228" fillOpacity="0.75" stroke="#3a2010" strokeWidth="1.5"/>
+      {/* Curved roof – upper */}
+      <path d="M42 40 Q100 25 158 40 L152 46 Q100 30 48 46 Z" fill="#5c4228" fillOpacity="0.8" stroke="#3a2010" strokeWidth="1.5"/>
+      {/* Roof ridge ornament */}
+      <path d="M96 25 Q100 18 104 25" stroke="#c4a878" strokeWidth="1.5" fill="none"/>
+      {/* Pine tree left */}
+      <line x1="16" y1="105" x2="16" y2="62" stroke="#3a5c32" strokeWidth="3"/>
+      <path d="M4 75 L16 55 L28 75 Z" fill="#3a5c32" fillOpacity="0.6"/>
+      <path d="M6 88 L16 70 L26 88 Z" fill="#3a5c32" fillOpacity="0.5"/>
+      {/* Steam from bath */}
+      <path d="M118 50 Q114 40 119 32" stroke="#a8b8a0" strokeWidth="1.5" fill="none" opacity="0.5" className="steam-line"/>
+      <path d="M128 52 Q124 42 129 34" stroke="#a8b8a0" strokeWidth="1.2" fill="none" opacity="0.4" className="steam-line" style={{animationDelay:'0.8s'}}/>
     </g>
   ),
+
   restaurant: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M15 46 Q15 30 36 30 Q57 30 57 46 Z" fill="#e8dfc8" fillOpacity="0.5"/>
-      <path d="M12 48 L60 48" strokeWidth="2.2"/>
-      <path d="M25 18 L24 30 M36 16 L36 30 M47 18 L48 30" strokeWidth="1.6"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Misty background */}
+      <path d="M0 78 L22 62 L44 72 L70 54 L95 66 L130 50 L165 62 L200 55 L200 80 L0 80 Z" fill="#c8bfa0" fillOpacity="0.25"/>
+      {/* Bowl shadow */}
+      <ellipse cx="100" cy="116" rx="55" ry="7" fill="#c8bfa0" fillOpacity="0.25"/>
+      {/* Bowl body */}
+      <path d="M40 80 C38 108 162 108 160 80 L153 68 C132 90 68 90 47 68 Z" fill="#e8dfc8" stroke="#9c8340" strokeWidth="2"/>
+      {/* Bowl rim */}
+      <ellipse cx="100" cy="68" rx="53" ry="14" fill="#ddd4bc" stroke="#9c8340" strokeWidth="2"/>
+      {/* Broth */}
+      <ellipse cx="100" cy="66" rx="46" ry="10" fill="#c87e18" fillOpacity="0.22"/>
+      {/* Noodle wisps */}
+      <path d="M66 63 Q80 57 96 62 T120 59" stroke="#e0d4bc" strokeWidth="2" fill="none"/>
+      <path d="M68 68 Q84 62 100 67 T128 64" stroke="#e0d4bc" strokeWidth="1.6" fill="none"/>
+      {/* Soft-boiled egg */}
+      <circle cx="82" cy="61" r="10" fill="#f5edd8" stroke="#9c8340" strokeWidth="1.4"/>
+      <circle cx="82" cy="61" r="5.5" fill="#c87e18" fillOpacity="0.7"/>
+      {/* Nori */}
+      <rect x="108" y="54" width="10" height="20" rx="1" fill="#3a5c32" fillOpacity="0.75" transform="rotate(-8 113 64)"/>
+      {/* Scallion dots */}
+      <circle cx="120" cy="70" r="2.5" fill="#5c8050"/>
+      <circle cx="126" cy="67" r="2" fill="#5c8050"/>
+      {/* Chopsticks */}
+      <line x1="52" y1="28" x2="96" y2="72" stroke="#9c6c30" strokeWidth="3" strokeLinecap="round"/>
+      <line x1="63" y1="25" x2="106" y2="68" stroke="#9c6c30" strokeWidth="3" strokeLinecap="round"/>
+      {/* Steam */}
+      <path d="M76 54 Q71 40 78 28 T72 16" stroke="#a8b8a0" strokeWidth="2" fill="none" className="steam-line"/>
+      <path d="M100 52 Q95 38 102 26 T96 14" stroke="#a8b8a0" strokeWidth="2" fill="none" className="steam-line" style={{animationDelay:'0.8s'}}/>
+      <path d="M122 54 Q117 40 124 28" stroke="#a8b8a0" strokeWidth="1.5" fill="none" className="steam-line" style={{animationDelay:'1.5s'}}/>
     </g>
   ),
+
   museum: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 26 L36 12 L64 26 Z" fill="#e8dfc8" fillOpacity="0.6"/>
-      <line x1="18" y1="26" x2="18" y2="48" strokeWidth="2.2"/>
-      <line x1="36" y1="26" x2="36" y2="48" strokeWidth="2.2"/>
-      <line x1="54" y1="26" x2="54" y2="48" strokeWidth="2.2"/>
-      <line x1="10" y1="48" x2="62" y2="48" strokeWidth="2.2"/>
-      <line x1="10" y1="26" x2="62" y2="26"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Sky */}
+      <path d="M0 0 L200 0 L200 60 L0 60 Z" fill="#7aafcc" fillOpacity="0.1"/>
+      {/* Distant mountains */}
+      <path d="M0 65 L35 40 L58 56 L85 32 L112 50 L142 28 L168 46 L200 35 L200 65 Z" fill="#c8bfa0" fillOpacity="0.3"/>
+      {/* Torii gate - pillars */}
+      <rect x="55" y="48" width="14" height="72" rx="3" fill="#b83020" fillOpacity="0.85" stroke="#8c1e10" strokeWidth="1.5"/>
+      <rect x="131" y="48" width="14" height="72" rx="3" fill="#b83020" fillOpacity="0.85" stroke="#8c1e10" strokeWidth="1.5"/>
+      {/* Torii – top kasagi (curved) */}
+      <path d="M40 48 Q100 34 160 48 L158 58 Q100 42 42 58 Z" fill="#b83020" fillOpacity="0.9" stroke="#8c1e10" strokeWidth="1.5"/>
+      {/* Torii – lower nuki bar */}
+      <rect x="55" y="66" width="90" height="9" rx="1" fill="#b83020" fillOpacity="0.75" stroke="#8c1e10" strokeWidth="1"/>
+      {/* Shimenawa rope */}
+      <path d="M55 54 Q100 60 145 54" stroke="#e8dfc8" strokeWidth="2.5" fill="none" strokeDasharray="4 3"/>
+      {/* Stone path */}
+      <rect x="88" y="110" width="14" height="10" rx="1" fill="#c8bfa0" fillOpacity="0.5"/>
+      <rect x="93" y="100" width="14" height="10" rx="1" fill="#c8bfa0" fillOpacity="0.4"/>
+      <rect x="88" y="90" width="14" height="10" rx="1" fill="#c8bfa0" fillOpacity="0.5"/>
+      {/* Cedar trees */}
+      <line x1="22" y1="120" x2="22" y2="62" stroke="#3a5c32" strokeWidth="4"/>
+      <path d="M8 78 L22 55 L36 78 Z" fill="#3a5c32" fillOpacity="0.65"/>
+      <path d="M10 95 L22 75 L34 95 Z" fill="#3a5c32" fillOpacity="0.55"/>
+      <line x1="178" y1="120" x2="178" y2="62" stroke="#3a5c32" strokeWidth="4"/>
+      <path d="M164 78 L178 55 L192 78 Z" fill="#3a5c32" fillOpacity="0.65"/>
+      <path d="M166 95 L178 75 L190 95 Z" fill="#3a5c32" fillOpacity="0.55"/>
     </g>
   ),
+
   shop: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="14" y="28" width="44" height="22" rx="3" fill="#e8dfc8" fillOpacity="0.5"/>
-      <path d="M22 28 Q22 18 36 18 Q50 18 50 28"/>
-      <circle cx="36" cy="38" r="4" fill="#c4a878" fillOpacity="0.6"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Background fade */}
+      <rect x="0" y="0" width="200" height="120" fill="#c87e18" fillOpacity="0.04"/>
+      {/* Ground */}
+      <path d="M0 108 L200 108 L200 120 L0 120 Z" fill="#c8bfa0" fillOpacity="0.3"/>
+      {/* Main shop building */}
+      <rect x="28" y="42" width="144" height="66" fill="#e8dfc8" fillOpacity="0.55" stroke="#9c8340" strokeWidth="2"/>
+      {/* Roof */}
+      <path d="M14 44 Q100 28 186 44 L180 52 Q100 36 20 52 Z" fill="#5c4228" fillOpacity="0.78" stroke="#3a2010" strokeWidth="1.5"/>
+      {/* Noren curtain strips */}
+      <rect x="68" y="52" width="14" height="30" rx="2" fill="#b83020" fillOpacity="0.75"/>
+      <rect x="86" y="52" width="14" height="26" rx="2" fill="#b83020" fillOpacity="0.65"/>
+      <rect x="104" y="52" width="14" height="30" rx="2" fill="#b83020" fillOpacity="0.75"/>
+      <rect x="122" y="52" width="14" height="26" rx="2" fill="#b83020" fillOpacity="0.65"/>
+      <line x1="60" y1="52" x2="148" y2="52" stroke="#6b4010" strokeWidth="2"/>
+      {/* Display shelf left */}
+      <rect x="32" y="66" width="32" height="22" rx="2" fill="#ddd4bc" fillOpacity="0.6" stroke="#9c8340" strokeWidth="1"/>
+      <circle cx="42" cy="76" r="6" fill="#c87e18" fillOpacity="0.4" stroke="#9c8340" strokeWidth="1"/>
+      <circle cx="56" cy="73" r="5" fill="#7aafcc" fillOpacity="0.4" stroke="#9c8340" strokeWidth="1"/>
+      {/* Display shelf right */}
+      <rect x="138" y="66" width="32" height="22" rx="2" fill="#ddd4bc" fillOpacity="0.6" stroke="#9c8340" strokeWidth="1"/>
+      <rect x="142" y="70" width="10" height="14" rx="1" fill="#9c6c30" fillOpacity="0.5"/>
+      <rect x="155" y="72" width="10" height="12" rx="1" fill="#9c6c30" fillOpacity="0.4"/>
+      {/* Hanging lantern */}
+      <line x1="100" y1="28" x2="100" y2="40" stroke="#9c8340" strokeWidth="1.5"/>
+      <ellipse cx="100" cy="46" rx="10" ry="14" fill="#c87e18" fillOpacity="0.7" stroke="#9c8340" strokeWidth="1.5"/>
+      <ellipse cx="100" cy="38" rx="10" ry="4" fill="#e8a830" fillOpacity="0.5" stroke="#9c8340" strokeWidth="1"/>
+      <line x1="100" y1="60" x2="100" y2="65" stroke="#9c8340" strokeWidth="1.2"/>
     </g>
   ),
+
   transit: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M8 36 L54 36 L64 28 L54 20 L8 20 Z" fill="#e8dfc8" fillOpacity="0.5"/>
-      <rect x="12" y="22" width="12" height="9" rx="2" fill="#7aafcc" fillOpacity="0.5"/>
-      <rect x="28" y="22" width="12" height="9" rx="2" fill="#7aafcc" fillOpacity="0.5"/>
-      <line x1="16" y1="36" x2="14" y2="44" strokeWidth="1.4"/>
-      <line x1="44" y1="36" x2="42" y2="44" strokeWidth="1.4"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Sky */}
+      <path d="M0 0 L200 0 L200 72 L0 72 Z" fill="#e8dfc8" fillOpacity="0.3"/>
+      {/* Mountain Fuji */}
+      <path d="M5 108 L100 16 L195 108 Z" fill="#e8dfc8" fillOpacity="0.65" stroke="#9c8340" strokeWidth="1.5"/>
+      <path d="M82 40 L100 16 L118 40 Z" fill="white" fillOpacity="0.85"/>
+      {/* Cloud layer */}
+      <path d="M0 68 Q40 58 80 68 T160 65 T200 68" stroke="#e8e0d0" strokeWidth="7" fill="none" opacity="0.45"/>
+      {/* Rails */}
+      <line x1="0" y1="112" x2="200" y2="112" stroke="#9c8340" strokeWidth="2.5"/>
+      <line x1="0" y1="118" x2="200" y2="118" stroke="#9c8340" strokeWidth="2.5"/>
+      {/* Sleepers */}
+      {[15,40,65,90,115,140,165,190].map((x, i) => (
+        <line key={i} x1={x} y1="110" x2={x} y2="120" stroke="#8c6c30" strokeWidth="3.5"/>
+      ))}
+      {/* Train body */}
+      <path d="M25 78 Q44 68 58 68 L194 68 L198 78 L198 108 L25 108 Z" fill="#f2e8d0" fillOpacity="0.92" stroke="#c4a878" strokeWidth="1.8"/>
+      {/* Blue stripe */}
+      <rect x="25" y="86" width="173" height="5.5" fill="#7aafcc" fillOpacity="0.7"/>
+      {/* Windows */}
+      {[64,88,112,136,160].map((x, i) => (
+        <rect key={i} x={x} y="71" width="18" height="11" rx="2" fill="#7aafcc" fillOpacity="0.6" stroke="#c4a878" strokeWidth="0.8"/>
+      ))}
+      {/* Nose */}
+      <path d="M25 78 Q17 84 14 91 Q14 102 23 108" stroke="#c4a878" strokeWidth="1.8" fill="none"/>
+      {/* Overhead wire */}
+      <line x1="0" y1="60" x2="200" y2="56" stroke="#9c8340" strokeWidth="0.8"/>
+      <line x1="44" y1="68" x2="44" y2="60" stroke="#9c8340" strokeWidth="0.8"/>
+      <line x1="104" y1="68" x2="104" y2="58" stroke="#9c8340" strokeWidth="0.8"/>
+      <line x1="164" y1="68" x2="164" y2="58" stroke="#9c8340" strokeWidth="0.8"/>
+      {/* Speed lines */}
+      <line x1="0" y1="82" x2="22" y2="82" stroke="#c8bfa0" strokeWidth="1.2" opacity="0.5"/>
+      <line x1="0" y1="87" x2="18" y2="87" stroke="#c8bfa0" strokeWidth="0.9" opacity="0.4"/>
     </g>
   ),
+
   nature: (
-    <g fill="none" stroke="#5c4228" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="36" y1="48" x2="36" y2="28"/>
-      <path d="M36 28 Q20 28 20 16 Q28 8 36 18 Q44 8 52 16 Q52 28 36 28" fill="#5c8050" fillOpacity="0.35"/>
+    <g fill="none" strokeLinecap="round" strokeLinejoin="round">
+      {/* Sky */}
+      <path d="M0 0 L200 0 L200 60 L0 60 Z" fill="#7aafcc" fillOpacity="0.14"/>
+      {/* Sun */}
+      <circle cx="158" cy="30" r="16" fill="#e8a830" fillOpacity="0.25"/>
+      <circle cx="158" cy="30" r="10" fill="#e8a830" fillOpacity="0.2"/>
+      {/* Distant mountains */}
+      <path d="M0 62 L28 38 L52 54 L80 30 L106 48 L138 26 L162 44 L200 35 L200 62 Z" fill="#a8bcaa" fillOpacity="0.42" stroke="#9c8340" strokeWidth="0.8"/>
+      {/* Lake surface */}
+      <path d="M0 65 Q100 58 200 65 L200 120 L0 120 Z" fill="#7aafcc" fillOpacity="0.22"/>
+      {/* Water reflection lines */}
+      <path d="M0 72 Q50 67 100 72 T200 70" stroke="#7aafcc" strokeWidth="1.2" fill="none"/>
+      <path d="M0 82 Q50 77 100 82 T200 80" stroke="#7aafcc" strokeWidth="0.8" fill="none"/>
+      {/* Light shimmer */}
+      <path d="M36 76 Q56 71 76 76" stroke="white" strokeWidth="2.5" fill="none" opacity="0.45" strokeLinecap="round"/>
+      <path d="M118 80 Q136 75 152 80" stroke="white" strokeWidth="2" fill="none" opacity="0.38" strokeLinecap="round"/>
+      {/* Cherry blossom tree left */}
+      <line x1="24" y1="120" x2="24" y2="55" stroke="#5c4228" strokeWidth="3.5"/>
+      <line x1="24" y1="72" x2="10" y2="58" stroke="#5c4228" strokeWidth="2.5"/>
+      <line x1="24" y1="66" x2="36" y2="54" stroke="#5c4228" strokeWidth="2.5"/>
+      <circle cx="14" cy="54" r="16" fill="#e8a830" fillOpacity="0.18"/>
+      <circle cx="30" cy="48" r="14" fill="#b83020" fillOpacity="0.15"/>
+      <circle cx="24" cy="56" r="12" fill="#c84838" fillOpacity="0.18"/>
+      {/* Petals */}
+      <circle cx="8" cy="50" r="3" fill="#f5c0c0" fillOpacity="0.7"/>
+      <circle cx="18" cy="44" r="3" fill="#f5c0c0" fillOpacity="0.6"/>
+      <circle cx="34" cy="46" r="2.5" fill="#f5c0c0" fillOpacity="0.6"/>
+      {/* Reed grasses right */}
+      <line x1="170" y1="120" x2="170" y2="72" stroke="#5c8050" strokeWidth="2.5"/>
+      <line x1="178" y1="118" x2="178" y2="68" stroke="#3a5c32" strokeWidth="3"/>
+      <line x1="186" y1="120" x2="186" y2="74" stroke="#5c8050" strokeWidth="2"/>
+      <ellipse cx="170" cy="70" rx="3.5" ry="9" fill="#8c6c30" fillOpacity="0.65"/>
+      <ellipse cx="178" cy="66" rx="4" ry="10" fill="#8c6c30" fillOpacity="0.7"/>
+      <ellipse cx="186" cy="72" rx="3" ry="9" fill="#8c6c30" fillOpacity="0.6"/>
+      {/* Floating firefly */}
+      <circle cx="95" cy="45" r="2.5" fill="#e8a830" fillOpacity="0.7" className="float-item"/>
+      <circle cx="110" cy="38" r="2" fill="#e8a830" fillOpacity="0.5" className="float-item" style={{animationDelay:'1.2s'}}/>
     </g>
   ),
 };
 
 const ActivityTypeVignette: React.FC<{ type: string }> = ({ type }) => (
-  <svg className="activity-vignette" viewBox="0 0 72 56">
+  <svg className="activity-vignette" viewBox="0 0 200 120">
     {typeVignettePaths[type] ?? typeVignettePaths.museum}
   </svg>
 );
@@ -1185,7 +1350,7 @@ const DayCard: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {acts.map((act, i) => (
             <div key={i} style={{ display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-              <div style={{ flexShrink: 0, width: '56px', height: '44px' }}>
+              <div style={{ flexShrink: 0, width: '140px', height: '85px' }}>
                 <ActivityTypeVignette type={act.type} />
               </div>
               <div style={{ flex: 1 }}>
