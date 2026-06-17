@@ -1,731 +1,790 @@
-import { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { create } from 'zustand';
+import { APIProvider, Map, useMap, MapControl, ControlPosition } from '@vis.gl/react-google-maps';
+import { Plus, Trash, BookOpen, ChevronDown, ChevronUp, Edit3, Check } from 'lucide-react';
 
-// ============================================================================
-//   1. TRIP CONFIGURATION (Change your month, year, and start date here!)
-// ============================================================================
-const TRIP_MONTH = "April"; // Change to "May", "September", "December", etc.
-const TRIP_YEAR = "2027";
-const START_DAY = 1;      // First day of your trip
+// --- TS INTERFACES ---
+export interface Activity {
+  lat: number;
+  lng: number;
+  title: string;
+  time: string;
+  type: 'hotel' | 'restaurant' | 'museum' | 'shop' | 'transit' | 'nature';
+}
 
-// Helper function to calculate calendar dates based on start date
-const getCalendarDate = (dayOffset: number): string => {
-  const currentDay = START_DAY + dayOffset;
-  // Simple ordinal suffix helper (1st, 2nd, 3rd, 4th...)
-  const j = currentDay % 10;
-  const k = currentDay % 100;
-  if (j === 1 && k !== 11) return `${TRIP_MONTH} ${currentDay}st`;
-  if (j === 2 && k !== 12) return `${TRIP_MONTH} ${currentDay}nd`;
-  if (j === 3 && k !== 13) return `${TRIP_MONTH} ${currentDay}rd`;
-  return `${TRIP_MONTH} ${currentDay}th`;
+export interface Meal {
+  text: string;
+  booked: boolean;
+}
+
+export interface DayMeals {
+  breakfast: Meal;
+  lunch: Meal;
+  dinner: Meal;
+}
+
+export interface HotelAnchor {
+  lat: number;
+  lng: number;
+  name: string;
+  loop: boolean;
+}
+
+export interface RestaurantBooking {
+  name: string;
+  time: string;
+  notes: string;
+}
+
+export interface Reservation {
+  hotelConfirmation?: string;
+  hotelCheckIn?: string;
+  hotelCheckOut?: string;
+  hotelAddress?: string;
+  hotelPhone?: string;
+  restaurantBookings?: RestaurantBooking[];
+  transportRef?: string;
+  notes?: string;
+}
+
+export interface UserEdits {
+  activities: Record<string, { title?: string; description?: string }>;
+  meals: Record<string, { breakfast?: string; lunch?: string; dinner?: string }>;
+}
+
+interface TravelStore {
+  activeDay: number;
+  editMode: boolean;
+  userEdits: UserEdits;
+  reservations: Record<number, Reservation>;
+  setActiveDay: (day: number) => void;
+  toggleEditMode: () => void;
+  updateActivityEdit: (dayId: number, actIndex: number, field: 'title' | 'description', val: string) => void;
+  updateMealEdit: (dayId: number, mealType: 'breakfast' | 'lunch' | 'dinner', val: string) => void;
+  updateReservation: (dayId: number, fields: Partial<Reservation>) => void;
+}
+
+const EDITS_KEY = 'wanderer_edits_v1';
+const RESERVATIONS_KEY = 'wanderer_reservations_v1';
+
+const useStore = create<TravelStore>((set) => ({
+  activeDay: 1,
+  editMode: false,
+  userEdits: JSON.parse(localStorage.getItem(EDITS_KEY) || '{"activities":{},"meals":{}}'),
+  reservations: JSON.parse(localStorage.getItem(RESERVATIONS_KEY) || '{}'),
+
+  setActiveDay: (day) => set({ activeDay: day }),
+  toggleEditMode: () => set((state) => ({ editMode: !state.editMode })),
+
+  updateActivityEdit: (dayId, actIndex, field, val) => set((state) => {
+    const nextEdits = { ...state.userEdits };
+    const key = `${dayId}_${actIndex}`;
+    if (!nextEdits.activities[key]) nextEdits.activities[key] = {};
+    nextEdits.activities[key][field] = val;
+    localStorage.setItem(EDITS_KEY, JSON.stringify(nextEdits));
+    return { userEdits: nextEdits };
+  }),
+
+  updateMealEdit: (dayId, mealType, val) => set((state) => {
+    const nextEdits = { ...state.userEdits };
+    const key = String(dayId);
+    if (!nextEdits.meals[key]) nextEdits.meals[key] = {};
+    nextEdits.meals[key][mealType] = val;
+    localStorage.setItem(EDITS_KEY, JSON.stringify(nextEdits));
+    return { userEdits: nextEdits };
+  }),
+
+  updateReservation: (dayId, fields) => set((state) => {
+    const nextReservations = { ...state.reservations };
+    nextReservations[dayId] = { ...nextReservations[dayId], ...fields };
+    localStorage.setItem(RESERVATIONS_KEY, JSON.stringify(nextReservations));
+    return { reservations: nextReservations };
+  }),
+}));
+
+const regionColors: Record<string, string> = {
+  tokyo: '#c87e18', izu: '#4a7848', hakone: '#5878a0', 'lake biwa': '#388888', osaka: '#b84428', kyoto: '#7a4a88'
 };
 
-// ============================================================================
-//   2. TYPES FOR STRICT TS COMPILATION
-// ============================================================================
-interface Activity {
-  time: string;
-  title: string;
-  detail: string;
-}
+const regionMap: Record<number, 'tokyo' | 'izu' | 'hakone' | 'lake biwa' | 'osaka' | 'kyoto'> = {
+  1:'tokyo', 2:'tokyo', 3:'tokyo', 4:'tokyo', 5:'izu', 6:'izu', 7:'hakone', 8:'hakone',
+  9:'lake biwa', 10:'osaka', 11:'osaka', 12:'osaka', 13:'kyoto', 14:'kyoto', 15:'kyoto', 16:'kyoto',
+  17:'tokyo', 18:'tokyo'
+};
 
-interface Meal {
-  type: string;
-  place: string;
-  item: string;
-}
+const hotelAnchors: Record<number, HotelAnchor | null> = {
+  1: null,
+  2: { lat:35.6717, lng:139.7645, name:"Hyatt Centric Ginza", loop:true },
+  3: { lat:35.6717, lng:139.7645, name:"Hyatt Centric Ginza", loop:true },
+  4: { lat:35.6717, lng:139.7645, name:"Hyatt Centric Ginza", loop:true },
+  5: { lat:35.6717, lng:139.7645, name:"Hyatt Centric Ginza", loop:false },
+  6: { lat:34.9711, lng:139.0911, name:"Asaba Ryokan", loop:true },
+  7: { lat:34.9711, lng:139.0911, name:"Asaba Ryokan", loop:false },
+  8: { lat:35.2492, lng:139.0441, name:"Gora Kadan", loop:true },
+  9: { lat:35.2492, lng:139.0441, name:"Gora Kadan", loop:false },
+  10: { lat:35.2711, lng:135.9876, name:"Biwako Ryokisui", loop:false },
+  11: { lat:34.7055, lng:135.4949, name:"InterContinental Osaka", loop:true },
+  12: { lat:34.7055, lng:135.4949, name:"InterContinental Osaka", loop:true },
+  13: { lat:34.7055, lng:135.4949, name:"InterContinental Osaka", loop:false },
+  14: { lat:35.0538, lng:135.7319, name:"ROKU KYOTO", loop:true },
+  15: { lat:35.0538, lng:135.7319, name:"ROKU KYOTO", loop:true },
+  16: { lat:35.0538, lng:135.7319, name:"ROKU KYOTO", loop:true },
+  17: { lat:35.0538, lng:135.7319, name:"ROKU KYOTO", loop:false },
+  18: { lat:35.6812, lng:139.7671, name:"Tokyo Station Hotel", loop:false }
+};
 
-interface Transport {
-  type: string;
-  detail: string;
-}
+const activities: Record<number, Activity[]> = {
+  1: [
+    { lat:35.7766, lng:140.3929, title:"Narita International Airport", time:"Afternoon", type:"transit" },
+    { lat:35.6717, lng:139.7645, title:"Hyatt Centric Ginza", time:"05:30 PM", type:"hotel" },
+    { lat:35.6698, lng:139.7662, title:"Ginza Happo Seafood", time:"07:30 PM", type:"restaurant" }
+  ],
+  2: [
+    { lat:35.6719, lng:139.7032, title:"Meiji Jingu Gyoen", time:"09:00 AM", type:"nature" },
+    { lat:35.6621, lng:139.7161, title:"Nezu Museum Gardens", time:"11:30 AM", type:"museum" },
+    { lat:35.6705, lng:139.7640, title:"Seiko Museum Ginza", time:"02:30 PM", type:"museum" }
+  ],
+  3: [
+    { lat:35.7164, lng:139.7845, title:"Kappabashi Knife Street", time:"09:30 AM", type:"shop" },
+    { lat:35.7096, lng:139.8112, title:"Sumida Park River Bank", time:"01:00 PM", type:"nature" }
+  ],
+  4: [
+    { lat:35.6938, lng:139.7034, title:"Shinjuku Jazz Kissa", time:"04:00 PM", type:"restaurant" },
+    { lat:35.6943, lng:139.6991, title:"Omoide Yokocho", time:"07:30 PM", type:"restaurant" }
+  ],
+  5: [
+    { lat:35.6812, lng:139.7671, title:"Tokyo Station Shinkansen", time:"09:00 AM", type:"transit" },
+    { lat:34.9711, lng:139.0911, title:"Asaba Ryokan, Shuzenji", time:"03:30 PM", type:"hotel" }
+  ],
+  6: [
+    { lat:34.9723, lng:139.0818, title:"Shuzenji Bamboo Forest", time:"10:00 AM", type:"nature" },
+    { lat:34.9711, lng:139.0911, title:"Asaba Kaiseki & Noh Stage", time:"06:00 PM", type:"restaurant" }
+  ],
+  7: [
+    { lat:35.2012, lng:139.0234, title:"Hakone Tozan Railway", time:"11:00 AM", type:"transit" },
+    { lat:35.2492, lng:139.0441, title:"Gora Kadan Imperial Onsen", time:"03:30 PM", type:"hotel" }
+  ],
+  8: [
+    { lat:35.2441, lng:139.0325, title:"Hakone Open-Air Museum", time:"09:30 AM", type:"museum" },
+    { lat:35.2429, lng:139.0194, title:"Owakudani Ropeway", time:"01:30 PM", type:"nature" }
+  ],
+  9: [
+    { lat:35.3644, lng:136.3636, title:"Biwako Lakeside Express", time:"12:00 PM", type:"transit" },
+    { lat:35.2711, lng:135.9876, title:"Lakeside Ryokan", time:"04:00 PM", type:"hotel" }
+  ],
+  10: [
+    { lat:34.8924, lng:135.6742, title:"Suntory Yamazaki Distillery", time:"10:30 AM", type:"museum" },
+    { lat:34.7055, lng:135.4949, title:"InterContinental Osaka", time:"04:00 PM", type:"hotel" }
+  ],
+  11: [
+    { lat:34.6687, lng:135.5013, title:"Dotonbori Canal Walk", time:"05:00 PM", type:"nature" },
+    { lat:34.6661, lng:135.5058, title:"Kushikatsu Counter", time:"07:30 PM", type:"restaurant" }
+  ],
+  12: [
+    { lat:34.8183, lng:135.5501, title:"Church of the Light, Ibaraki", time:"10:00 AM", type:"museum" },
+    { lat:34.7058, lng:135.4901, title:"Umeda Sky Building", time:"02:30 PM", type:"museum" }
+  ],
+  13: [
+    { lat:34.9858, lng:135.7587, title:"Kyoto Station Arrival", time:"11:00 AM", type:"transit" },
+    { lat:35.0538, lng:135.7319, title:"ROKU KYOTO Foothills", time:"03:00 PM", type:"hotel" }
+  ],
+  14: [
+    { lat:35.0394, lng:135.7178, title:"Ryoan-ji Zen Garden", time:"08:30 AM", type:"museum" },
+    { lat:35.0321, lng:135.7276, title:"Kinkaku-ji Golden Pavilion", time:"11:00 AM", type:"museum" }
+  ],
+  15: [
+    { lat:35.0268, lng:135.7982, title:"Ginkaku-ji Silver Pavilion", time:"09:00 AM", type:"museum" },
+    { lat:35.0205, lng:135.7958, title:"Philosopher's Path", time:"10:30 AM", type:"nature" }
+  ],
+  16: [
+    { lat:35.0552, lng:135.7251, title:"Takagamine Tea House", time:"02:00 PM", type:"museum" },
+    { lat:35.0538, lng:135.7319, title:"Clay-Pot Crab Dinner, ROKU", time:"06:30 PM", type:"restaurant" }
+  ],
+  17: [
+    { lat:34.9858, lng:135.7587, title:"Kyoto → Nozomi Shinkansen", time:"11:30 AM", type:"transit" },
+    { lat:35.6812, lng:139.7671, title:"Tokyo Station Hotel", time:"03:30 PM", type:"hotel" }
+  ],
+  18: [
+    { lat:35.6852, lng:139.7614, title:"Imperial Palace East Gardens", time:"10:00 AM", type:"nature" },
+    { lat:35.5494, lng:139.7798, title:"Haneda International Airport", time:"02:00 PM", type:"transit" }
+  ]
+};
 
-interface DocumentItem {
-  name: string;
-  id: string;
-  qrCodeUrl: string;
-}
+const haikus: Record<number, string[]> = {
+  1: ["Wheels touch foreign earth\nneon signs blur into signs\nTokyo begins", "Timber walls breathe warmth\nGinza hums six stories down\ndrop your bag and rest", "The sea arrives raw\nsnow crab glistens under ice\nsalt dissolves the day"],
+  2: ["Cedar shadows fall\nKiyomasa's well holds still\nthe forest breathes deep", "Bamboo lines the path\nstone lanterns emerge from leaves\nhidden, always here", "A pendulum swings\neach gear a piece of the year\ntime assembles still"],
+  3: ["Cold iron waits here\na blacksmith's year in the blade\nhold it, feel the edge", "Old water meets new\nwhere the river bends, a bridge\nTokyo reflects"],
+  4: ["Vinyl turns slowly\namber in a dark corner\nthe trumpet holds on", "Smoke lifts between stalls\nbinchotan chars the long night\nsalt, char, and cold beer"],
+  5: ["A white dart southward\ntowers thin to cedar hills\nspeed erases both", "Cross the wooden gate\na Noh stage floats on water\nthe spring breathes below"],
+  6: ["Green columns rise straight\nlight dissolves to jade above\nno sound, only stalk", "Dashi, then lacquer\nthe actor's mask holds the lake\ndarkness understands"],
+  7: ["The train folds backward\ncedar ravines grip the rail\nthe mountain yields first", "Stone pools, old bloodlines\nthe mineral spring holds time\nbreathe in, then release"],
+  8: ["Bronze figures stand still\npeaks do not know their own names\nboth belong to sky", "Sulfur splits the air\nFuji ghosted in the west\nearth is still working"],
+  9: ["Japan's oldest lake\nthe old roads still follow it\nstill water, still trade", "Tatami, still lake\nthe shoji glows at twilight\nunpack, then breathe out"],
+  10: ["Three rivers converge\noak remembers what spring said\nsip slowly, one dram", "Glass walls, city grid\nthe neon haze pulses far\nOsaka below"],
+  11: ["Light floods the canal\nthe crab sign spins above all\nOsaka laughs loud", "Panko hits the oil\none dip, never twice, the rule\ncrisp to the bone, done"],
+  12: ["A cross cut in stone\nmorning enters as pure light\nAndo left no more", "Two towers, one void\nglass walks you through the open\nOsaka breathes up"],
+  13: ["The north grows older\nwooden eaves on green hillsides\na thousand-year calm", "Mountains at the door\nraked stone, clear stream, cedar shade\narrive, then be still"],
+  14: ["Fifteen stones remain\nno one agrees what they mean\nthat is the whole point", "Still water holds gold\nthe pavilion never speaks\nmoss does the talking"],
+  15: ["Sand cone waits for moon\nthe pavilion ungilded\nsilver needs no proof", "Stones beside water\ncherry boughs bend to the stream\nwalk slowly, think less"],
+  16: ["Bamboo fills the cup\nthe whisk turns froth into art\nquiet follows you", "Snow crab meets the clay\nsteam lifts the lid, rice below\nthis is the whole meal"],
+  17: ["Green hills stream backward\nthe coast curves east, then the grid\nTokyo grows back", "Old red bricks enclose\na room inside the great clock\nsleep in the station"],
+  18: ["Black pine, granite moat\nwalls cut by ten thousand hands\none last morning walk", "The gate opens last\nTokyo dims through the glass\ncarry what you learned"]
+};
 
-interface TripDay {
-  dayNumber: number;
-  title: string;
-  date: string;
-  activities: Activity[];
-  meals: Meal[];
-  transport: Transport[];
-  notes: string;
-  documents: DocumentItem[];
-}
+const meals: Record<number, DayMeals> = {
+  1: { breakfast: { text: "In transit — long-haul flight, arrive Narita past noon", booked: false }, lunch: { text: "Narita Airport ramen hall · a grounding bowl of shoyu or tonkotsu, the first Japanese mouthful", booked: false }, dinner: { text: "Ginza Happo · raw oysters on ice and snow crab legs, first maritime meal of the journey", booked: true } },
+  2: { breakfast: { text: "Kimuraya Honten Ginza · Japan's oldest bakery (est. 1869), fresh anpan straight from the oven on Chuo-dori", booked: false }, lunch: { text: "Maisen Tonkatsu Aoyama · legendary crispy pork cutlet set in a converted Meiji-era public bathhouse", booked: false }, dinner: { text: "Sushi Yoshitake or Ginza Sushi Iwa · intimate omakase nigiri at the counter, seasonal selections", booked: false } },
+  3: { breakfast: { text: "Shiseido Parlour Ginza · seventh-floor café above the historic cosmetics flagship, eggs and coffee over the rooftops", booked: false }, lunch: { text: "Sometaro Asakusa · monjayaki griddle cakes and cold Sapporo in the old shitamachi quarter", booked: false }, dinner: { text: "Otafuku Asakusa (est. 1945) · oden simmered in clear dashi, a beloved winter ritual in the old neighbourhood", booked: false } },
+  4: { breakfast: { text: "Shinjuku Isetan B2 food hall · melon pan and seasonal fruit from Japan's most celebrated basement market", booked: false }, lunch: { text: "Fuunji Shinjuku · thick wavy tsukemen with a richly complex dipping broth, a Shinjuku cult institution", booked: false }, dinner: { text: "Omoide Yokocho · binchotan yakitori in the smoky lantern-lit alley, cold draft beer, Shinjuku night", booked: true } },
+  5: { breakfast: { text: "Standing soba at Iwa near Shinbashi · a quick pre-shinkansen bowl of cold seiro soba, classic Tokyo fuel", booked: false }, lunch: { text: "Ekiben on the Shinkansen · wappa meshi bento box, cold green tea, watching the coast dissolve into green hills", booked: false }, dinner: { text: "Asaba Ryokan kaiseki · mountain vegetables, clear dashi, perfect local sake — first night deep in the Izu forest", booked: false } },
+  6: { breakfast: { text: "Morning walk to Shuzenji town · fresh warabi mochi and matcha at Toko-an sweet shop by the ancient spring", booked: false }, lunch: { text: "Shuzenji Agetofu · freshly deep-fried local tofu near the bamboo shrine, cold matcha alongside", booked: false }, dinner: { text: "Asaba multi-course kaiseki · sixteen lacquered courses, the floating Noh stage lit against the still water", booked: true } },
+  7: { breakfast: { text: "Oraga Soba Shuzenji · handmade buckwheat noodles at a riverside local, a final taste of Izu before the mountain transit", booked: false }, lunch: { text: "Yuba tofu café in Hakone · silken tofu skin drawn fresh from soy milk, ponzu, mountain quietude", booked: false }, dinner: { text: "Gyoza Center Hakone Yumoto · no-frills gyoza and ramen beloved by the mountain-town locals, comfort after the switchback climb", booked: false } },
+  8: { breakfast: { text: "Amazake Chaya (甘酒茶屋) · a tea house in continuous operation since 1618 on the old Tokaido road, sweet fermented amazake and grilled mochi", booked: false }, lunch: { text: "Owakudani kuro-tamago · sulfur-blackened eggs boiled in volcanic spring water, eaten hot on the ridge", booked: false }, dinner: { text: "Kasho Gyoshin near Hakone · local kaiseki dinner away from the hotel, mountain forage and delicate plating", booked: false } },
+  9: { breakfast: { text: "Bakery & Table Hakone Yumoto · lakeside morning toast and coffee at the wooden terrace before the long westward transit", booked: false }, lunch: { text: "En route stop · Omi beef yakiniku at a Shiga roadside restaurant — the prefecture's quietly famous hidden gem", booked: false }, dinner: { text: "Shatei Hamasho Otsu · freshwater eel (unagi) and funa-zushi (fermented crucian carp) at a local lakeside restaurant, Shiga's most ancient flavour", booked: false } },
+  10: { breakfast: { text: "Otsu morning market · freshly caught lake fish, pickled vegetables, and miso from the waterside market stalls", booked: false }, lunch: { text: "Near Yamazaki Distillery · whisky-paired small plates and Kyoto vegetable dishes at a riverside restaurant", booked: false }, dinner: { text: "Endo Sushi near Osaka Fish Market · the legendary market sushi counter open since the wholesale market days, fish so fresh it needs nothing", booked: false } },
+  11: { breakfast: { text: "Ichiwa mochi-ya · grilled mochi with sweet red bean paste at a shop that has stood near Imamiya Shrine since the year 1000", booked: false }, lunch: { text: "Mizuno Okonomiyaki · Dotonbori's 1945 original, mountain-yam batter griddled tableside to a golden crust", booked: false }, dinner: { text: "Daruma Kushikatsu · the original 1929 panko-skewer counter — crispy, golden, strict no-double-dipping rule enforced", booked: true } },
+  12: { breakfast: { text: "Café Absinthe Nakazakicho · creative all-day brunch in Osaka's most charming vintage neighbourhood, vintage tiles and morning coffee", booked: false }, lunch: { text: "Tsuruhashi yakiniku · tabletop wagyu and kimchi in Osaka's Korean quarter, the oldest and most fragrant covered market", booked: false }, dinner: { text: "Namba takoyaki crawl · five different stands along the Golden Street, comparing batter, char, and bonito flake technique", booked: false } },
+  13: { breakfast: { text: "Chibo Namba · one final Osaka okonomiyaki before the train north — the city's unofficial farewell dish, griddle-crisped at the table", booked: false }, lunch: { text: "Nishiki Market, Kyoto · Kyoto's ancient kitchen — tamagoyaki skewers, fresh tsukemono, tofu, warm soy milk from the stalls", booked: false }, dinner: { text: "Kikunoi Roan · the warm branch of 3-Michelin-star Kikunoi, Kyoto kaiseki in the stone-lantern-lined Maruyama hills", booked: false } },
+  14: { breakfast: { text: "Inoda Coffee Honten · the Kyoto kissaten institution since 1940, European-style breakfast in a beloved old shophouse near Sanjo", booked: false }, lunch: { text: "Shoraian Yudofu near Kinkaku-ji · silken tofu simmered slowly in spring-clear dashi in an old garden setting", booked: false }, dinner: { text: "Kichisen Kyoto · Japan's most revered kaiseki table — tea-ceremony cuisine at its very peak, book months ahead", booked: false } },
+  15: { breakfast: { text: "Sarasa Nishijin · morning coffee and toast in a converted 1920s public bathhouse, azulejo-tiled walls and slow light", booked: false }, lunch: { text: "Canal-side café on the Philosopher's Path · tofu dengaku and cold barley tea, a wooden bench above the stone waterway", booked: false }, dinner: { text: "Hyotei Kyoto · one of the oldest kaiseki restaurants in the world, serving the morning tea-ceremony meal since the 1600s", booked: false } },
+  16: { breakfast: { text: "Café Bibliotic Hello! · morning pour-over in a converted Kyoto machiya townhouse, textured plaster walls and quiet shelves", booked: false }, lunch: { text: "Takagamine Tea House Estate · wagashi sweets and whisked matcha, deep tatami silence in the northern hills", booked: true }, dinner: { text: "ROKU KYOTO Clay-Pot Crab Rice · sweet snow crab steamed over heirloom rice, intimate donabe at the foothills", booked: true } },
+  17: { breakfast: { text: "Tousuiro near Kyoto Station · a tofu kaiseki morning set — silken, clear-dashi richness, the definitive final Kyoto meal", booked: false }, lunch: { text: "Tokyo Station Ramen Street · eight premier ramen shops beneath the historic brick vault, choose your broth", booked: false }, dinner: { text: "Sushi Kanesaka Ginza · an elegant omakase counter a short walk from the station, a refined return to the capital", booked: false } },
+  18: { breakfast: { text: "Le Bretagne Yurakucho · Breton buckwheat galettes and café crème across from Hibiya Park, a beloved Tokyo morning institution since 1994", booked: false }, lunch: { text: "Marunouchi sushi · a final counter omakase — close the loop on the journey in the shadow of the old brick station", booked: false }, dinner: { text: "Haneda international lounge · a quiet pre-flight meal before the long arc home", booked: false } }
+};
 
-interface SketchInstance {
-  id: number;
-  index: number;
-  x: string;
-  y: string;
-  scale: number;
-  rotation: number;
-  opacity: number;
-}
+const dayMeta: Record<number, { title: string; lodging: string }> = {
+  1: { title: "Day 1: Arrival into Neon Mist", lodging: "Hyatt Centric Ginza" },
+  2: { title: "Day 2: Secret Gardens & Mechanical Masters", lodging: "Hyatt Centric Ginza" },
+  3: { title: "Day 3: Shokunin Crafts & Sumida Reflections", lodging: "Hyatt Centric Ginza" },
+  4: { title: "Day 4: Mid-Century Vinyl & Izakaya Alleyways", lodging: "Hyatt Centric Ginza" },
+  5: { title: "Day 5: Coastal Pathways into the Izu Peninsula", lodging: "Asaba Ryokan" },
+  6: { title: "Day 6: Deep Bamboo Groves & Floating Noh Stages", lodging: "Asaba Ryokan" },
+  7: { title: "Day 7: Through Cloud Passes to Hakone Caldera", lodging: "Gora Kadan" },
+  8: { title: "Day 8: Open-Air Sculpture & Volcanic Vents", lodging: "Gora Kadan" },
+  9: { title: "Day 9: Lake Biwa Rail Cruising", lodging: "Biwako Ryokisui" },
+  10: { title: "Day 10: Distilleries of the Yamazaki Glen", lodging: "InterContinental Osaka" },
+  11: { title: "Day 11: Osaka Neon Valleys & Street Gastronomy", lodging: "InterContinental Osaka" },
+  12: { title: "Day 12: Architectural Concrete & Tadao Ando", lodging: "InterContinental Osaka" },
+  13: { title: "Day 13: Entry into the Thousand-Year Capital", lodging: "Roku Kyoto" },
+  14: { title: "Day 14: Zen Rocks & Moss Courtyards", lodging: "Roku Kyoto" },
+  15: { title: "Day 15: Silver Pavilions & Philosopher Pathways", lodging: "Roku Kyoto" },
+  16: { title: "Day 16: Hidden Foothill Tea Shrines", lodging: "Roku Kyoto" },
+  17: { title: "Day 17: Return Flight Line to the Capital Grid", lodging: "Tokyo Station Hotel" },
+  18: { title: "Day 18: Final Reflections Over the Moat Walls", lodging: "Departure Outbound" }
+};
 
-// ============================================================================
-//   3. GHIBLI MARGIN ARTWORK POOL
-// ============================================================================
-const GHIBLI_SKETCHES = [
-  // Autumn Maple Leaf
-  <svg key="maple" viewBox="0 0 120 120" className="w-full h-full">
-    <defs>
-      <linearGradient id="mapleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#bf5a37" stopOpacity="0.8" />
-        <stop offset="50%" stopColor="#d98236" stopOpacity="0.7" />
-        <stop offset="100%" stopColor="#8c331b" stopOpacity="0.9" />
-      </linearGradient>
-    </defs>
-    <path d="M 60,110 L 60,90 M 60,90 Q 60,70 60,50" stroke="#3d2118" strokeWidth="2" strokeLinecap="round" />
-    <path d="M 60,90 C 45,85 15,80 20,60 C 22,50 35,62 40,55 C 30,45 10,40 18,25 C 23,20 38,38 45,30 C 40,15 30,0 45,5 C 50,8 55,25 60,35 C 65,25 70,8 75,5 C 90,0 80,15 75,30 C 82,38 97,20 102,25 C 110,40 90,45 80,55 C 85,62 98,50 100,60 C 105,80 75,85 60,90 Z" 
-          fill="url(#mapleGrad)" stroke="#3d2118" strokeWidth="1.5" strokeLinejoin="round" />
-    <path d="M 60,70 L 40,58 M 60,55 L 35,42 M 60,45 L 48,28 M 60,70 L 80,58 M 60,55 L 85,42 M 60,45 L 72,28" stroke="#3d2118" strokeWidth="1" strokeLinecap="round" />
-  </svg>,
-  // Soot Sprite (Susuwatari)
-  <svg key="soot" viewBox="0 0 120 120" className="w-full h-full">
-    <defs>
-      <radialGradient id="sootGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="70%" stopColor="#1e1b18" />
-        <stop offset="100%" stopColor="#3d3733" />
-      </radialGradient>
-      <radialGradient id="blushGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#e08282" stopOpacity="0.6" />
-        <stop offset="100%" stopColor="#e08282" stopOpacity="0" />
-      </radialGradient>
-    </defs>
-    <g stroke="#1a1816" strokeWidth="1.8" strokeLinecap="round">
-      <path d="M60 10 L60 110 M10 60 L110 60 M25 25 L95 95 M25 95 L95 25" />
-      <path d="M40 15 L80 105 M15 40 L105 80 M15 80 L105 40 M40 105 L80 15" />
-      <path d="M50 12 L70 108 M12 50 L108 70 M12 70 L108 50 M50 108 L70 12" />
-    </g>
-    <circle cx="60" cy="60" r="32" fill="url(#sootGrad)" stroke="#1a1816" strokeWidth="2" />
-    <circle cx="40" cy="68" r="10" fill="url(#blushGrad)" />
-    <circle cx="80" cy="68" r="10" fill="url(#blushGrad)" />
-    <circle cx="46" cy="52" r="10" fill="white" stroke="#1a1816" strokeWidth="1.5" />
-    <circle cx="74" cy="52" r="10" fill="white" stroke="#1a1816" strokeWidth="1.5" />
-    <circle cx="47" cy="52" r="3" fill="black" />
-    <circle cx="73" cy="52" r="3" fill="black" />
-  </svg>,
-  // Steaming Mug
-  <svg key="tea" viewBox="0 0 120 120" className="w-full h-full">
-    <defs>
-      <linearGradient id="mugGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#e8f1f5" />
-        <stop offset="100%" stopColor="#b9cbd6" />
-      </linearGradient>
-    </defs>
-    <path d="M 45,30 Q 40,15 50,5 T 45,-5 M 60,32 Q 65,18 55,8 T 65,-2 M 75,30 Q 70,16 80,6" fill="none" stroke="#a0afb8" strokeWidth="1.5" strokeLinecap="round" opacity="0.6" />
-    <path d="M 75,45 C 95,45 100,75 75,80" fill="none" stroke="#2a353d" strokeWidth="2.5" />
-    <rect x="35" y="38" width="45" height="46" rx="4" fill="url(#mugGrad)" stroke="#2a353d" strokeWidth="2" />
-    <ellipse cx="57" cy="62" rx="10" ry="12" fill="#fafafa" stroke="#2a353d" strokeWidth="1" />
-    <path d="M 52,60 Q 57,55 62,60 M 54,66 Q 57,63 60,66" stroke="#2a353d" strokeWidth="1" />
-  </svg>,
-  // Compass
-  <svg key="compass" viewBox="0 0 120 120" className="w-full h-full">
-    <circle cx="60" cy="60" r="45" fill="none" stroke="#544436" strokeWidth="2" />
-    <circle cx="60" cy="60" r="41" fill="none" stroke="#544436" strokeWidth="1" strokeDasharray="3 3" />
-    <polygon points="60,20 65,55 60,60" fill="#a64d32" stroke="#544436" strokeWidth="1" />
-    <polygon points="60,20 55,55 60,60" fill="#d9735d" stroke="#544436" strokeWidth="1" />
-    <polygon points="60,100 65,65 60,60" fill="#75675b" stroke="#544436" strokeWidth="1" />
-    <polygon points="60,100 55,65 60,60" fill="#bfaea1" stroke="#544436" strokeWidth="1" />
-    <polygon points="100,60 65,65 60,60" fill="#bfaea1" stroke="#544436" strokeWidth="1" />
-    <polygon points="20,60 55,55 60,60" fill="#bfaea1" stroke="#544436" strokeWidth="1" />
-    <text x="56" y="16" fontSize="11" fontFamily="Georgia" fill="#544436" fontWeight="bold">N</text>
-  </svg>
+const vignettePlacement: Record<number, number | null> = {
+  1: 2, 2: null, 3: 1, 4: null, 5: 1, 6: null, 7: 1, 8: null, 9: 1, 10: null, 11: 1, 12: null, 13: 1, 14: null, 15: 1, 16: null, 17: 1, 18: null
+};
+
+const vignetteStyle: Record<number, string> = {
+  1: "float:right;width:192px;height:118px;margin:4px 0 8px 12px;transform:rotate(2deg)",
+  2: "float:right;width:165px;height:165px;margin:4px 0 8px 12px;transform:rotate(-2.5deg)",
+  3: "float:right;width:210px;height:95px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
+  4: "float:right;width:168px;height:168px;margin:4px 0 8px 12px;transform:rotate(4deg)",
+  5: "float:right;width:200px;height:118px;margin:4px 0 8px 12px;transform:rotate(-1deg)",
+  6: "float:right;width:108px;height:195px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
+  7: "float:right;width:198px;height:112px;margin:4px 0 8px 12px;transform:rotate(1deg)",
+  8: "float:right;width:188px;height:112px;margin:4px 0 8px 12px;transform:rotate(-3deg)",
+  9: "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(1.5deg)",
+  10: "float:right;width:172px;height:162px;margin:4px 0 8px 12px;transform:rotate(2.5deg)",
+  11: "float:right;width:178px;height:145px;margin:4px 0 8px 12px;transform:rotate(-3.5deg)",
+  12: "float:right;width:168px;height:158px;margin:4px 0 8px 12px;transform:rotate(-1.5deg)",
+  13: "float:right;width:168px;height:102px;margin:4px 0 8px 12px;transform:rotate(2deg)",
+  14: "float:right;width:200px;height:120px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
+  15: "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(1deg)",
+  16: "float:right;width:168px;height:152px;margin:4px 0 8px 12px;transform:rotate(3deg)",
+  17: "float:right;width:196px;height:118px;margin:4px 0 8px 12px;transform:rotate(-2deg)",
+  18: "float:right;width:200px;height:118px;margin:4px 0 8px 12px;transform:rotate(1.5deg)"
+};
+
+// --- HIGH FIDELITY ANTIQUE WATERCOLOR GOOGLE MAP SKIN ---
+const RETRO_MAP_STYLE = [
+  { "elementType": "geometry", "stylers": [{ "color": "#ebe3cd" }] },
+  { "elementType": "labels.text.fill", "stylers": [{ "color": "#523735" }] },
+  { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f1e6" }] },
+  { "featureType": "administrative", "elementType": "geometry.stroke", "stylers": [{ "color": "#c9b2a6" }] },
+  { "featureType": "landscape.natural", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
+  { "featureType": "poi", "elementType": "geometry", "stylers": [{ "color": "#dfd2ae" }] },
+  { "featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{ "color": "#a5b076" }] },
+  { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{ "color": "#447530" }] },
+  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#f5f1e6" }] },
+  { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#f8c967" }] },
+  { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{ "color": "#e9bc62" }] },
+  { "featureType": "water", "elementType": "geometry.fill", "stylers": [{ "color": "#aac2c7" }] },
+  { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#607478" }] }
 ];
 
-// ============================================================================
-//   4. FULL 18-DAY JAPAN DIARY ITINERARY
-// ============================================================================
-const TRIP_DAYS: TripDay[] = [
-  {
-    dayNumber: 1,
-    title: "Arrival: Whispers of Tokyo Neon",
-    date: getCalendarDate(0),
-    activities: [
-      { time: "04:00 PM", title: "Touchdown at Haneda Terminal", detail: "Step into the humming terminal. Gather pocket WiFi and collect travel rail passes." },
-      { time: "07:30 PM", title: "Shinjuku Alleyways & Cozy Izakayas", detail: "Wander through Omoide Yokocho's narrow wood-paneled food alleys, smelling charcoal-grilled yakitori smoke rising into the mist." }
-    ],
-    meals: [
-      { type: "Dinner", place: "Tsubame Izakaya", item: "Tare-glazed chicken skewers with crisp cold lager" }
-    ],
-    transport: [
-      { type: "Train", detail: "Tokyo Monorail and JR Yamanote Line straight to hotel." }
-    ],
-    notes: "Rest early. Let the hum of the city lull us to sleep under heavy cotton duvets.",
-    documents: [
-      { name: "Tokyo Hotel Booking", id: "HOTEL-TYO-99", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HanedaTokyoHotelCheckIn" }
-    ]
-  },
-  {
-    dayNumber: 2,
-    title: "Mossy Paths & Retro Meiji Forest",
-    date: getCalendarDate(1),
-    activities: [
-      { time: "09:30 AM", title: "Meiji Jingu Shrine Sanctuary", detail: "Step through massive cypress Torii gates into a lush 170-acre forest. Crisp morning air smelling of ancient cedar bark." },
-      { time: "02:00 PM", title: "Harajuku & Cat Street Explorations", detail: "Slip past busy avenues into narrow alleys lined with hand-painted clothing boutiques and tiny espresso holes." }
-    ],
-    meals: [
-      { type: "Breakfast", place: "Nozy Coffee", item: "Pourover single-origin brew with warm cinnamon buns" },
-      { type: "Lunch", place: "Gyoza Lou", item: "Pan-fried pork and chive gyoza with cucumber pickles" }
-    ],
-    transport: [
-      { type: "Walking", detail: "Wandering winding paths through ancient shrine groves and Harajuku side-streets (15,000 steps)." }
-    ],
-    notes: "Look closely at the giant walls of sake barrels stacked in dedication outside the shrine paths.",
-    documents: []
-  },
-  {
-    dayNumber: 3,
-    title: "The Old Heart of Yanaka Ginza",
-    date: getCalendarDate(2),
-    activities: [
-      { time: "10:00 AM", title: "Nostalgic Yanaka Alleys", detail: "A rare pocket of Tokyo that survived wartime bombing. Stroll quiet residential paths, spotting lazy alley cats napping on tiled rooftops." },
-      { time: "03:00 PM", title: "Ueno Park & Pond Lilies", detail: "Row a green wooden boat across Shinobazu Pond, watching pink lotus flowers floating over still water." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Yanaka Shippoya", item: "Warm, cat-tail shaped sweet donuts filled with custard" },
-      { type: "Dinner", place: "Izu-ei Honten", item: "Eel (unagi) grilled over binchotan wood, served in a lacquer bento box" }
-    ],
-    transport: [
-      { type: "Train", detail: "Yamanote Line loops to Nippori Station." }
-    ],
-    notes: "Yanaka is best explored slowly with no maps. Let yourself get lost.",
-    documents: []
-  },
-  {
-    dayNumber: 4,
-    title: "Into Mitaka's Ghibli Forest",
-    date: getCalendarDate(3),
-    activities: [
-      { time: "11:00 AM", title: "The Ghibli Museum in Mitaka", detail: "Walk through a spiral-staircased magical house. Meet a giant brass robot soldier guarding a rooftop garden." },
-      { time: "04:00 PM", title: "Inokashira Park Forest Walk", detail: "Walk under low-hanging weeping cherry trees along the peaceful park river canal." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Straw Hat Cafe", item: "Fluffy pancakes stamped with black cat footprints" },
-      { type: "Dinner", place: "Kichijoji Harmonica Yokocho", item: "Tiny retro standing bar serving steaming vegetable tempura" }
-    ],
-    transport: [
-      { type: "Train", detail: "Chuo Line rapid train to Mitaka Station, walk through wooded pathways." }
-    ],
-    notes: "No cameras are allowed inside the Ghibli museum. Feel the art with your eyes, not your screen.",
-    documents: [
-      { name: "Mitaka Ghibli Admission", id: "GHIBLI-TIX-4", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=GhibliMitakaMuseumMuseumVoucher" }
-    ]
-  },
-  {
-    dayNumber: 5,
-    title: "Kitchens of Tsukiji & Electronic Glow",
-    date: getCalendarDate(4),
-    activities: [
-      { time: "07:30 AM", title: "Tsukiji Outer Market Food Hunt", detail: "Squeeze past bustling family vendors selling charcoal oysters and blocks of golden rolled omelet." },
-      { time: "06:00 PM", title: "Akihabara Vintage Arcade Crawl", detail: "Step into dark multi-story retro arcades, surrounded by 8-bit synthetic chirps and the smell of warm machine fans." }
-    ],
-    meals: [
-      { type: "Breakfast", place: "Yamachou Omelet", item: "Hot sweet rolled egg omelet skewered on bamboo" },
-      { type: "Lunch", place: "Sushi Dai", item: "Morning-catch tuna nigiri hand-formed right before us" }
-    ],
-    transport: [
-      { type: "Metro", detail: "Hibiya Line to Tsukiji, Hibiya Line to Akihabara." }
-    ],
-    notes: "Bring small coins for vintage Capsule toy machines (Gachapon) in Akihabara's backstreets.",
-    documents: []
-  },
-  {
-    dayNumber: 6,
-    title: "Hakone: Steam, Sulfur & Volcanoes",
-    date: getCalendarDate(5),
-    activities: [
-      { time: "11:30 AM", title: "Hakone Tozan Switchback Train", detail: "Ride a vintage red train as it crawls slowly up a steep mountain forest through narrow wooden bridges." },
-      { time: "02:00 PM", title: "Owakudani Boiling Valley", detail: "Walk through billowing clouds of hot volcanic steam. Eat sulfur-boiled black eggs (Kuro-tamago)." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Owakudani Rest House", item: "Warm sulfur-boiled eggs (rumored to add 7 years to your life)" },
-      { type: "Dinner", place: "Ryokan Dining Hall", item: "12-course local Kaiseki banquet containing mountain vegetables" }
-    ],
-    transport: [
-      { type: "Train", detail: "Odakyu Romancecar express from Shinjuku into Hakone-Yumoto mountain pass." }
-    ],
-    notes: "If the mountain sky is clear, look out for the snow-capped silhouette of Mt. Fuji over the lakes.",
-    documents: [
-      { name: "Ryokan Booking & Onsen Pass", id: "RYO-HKN-882", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HakoneRyokanHotSpringReservation" }
-    ]
-  },
-  {
-    dayNumber: 7,
-    title: "Lake Ashi's Misty Shrines",
-    date: getCalendarDate(6),
-    activities: [
-      { time: "10:00 AM", title: "Lake Ashi Pirate Cruise", detail: "Glide across a vast, mist-covered mountain caldera lake, looking at a towering vermillion Torii gate standing directly in the water." },
-      { time: "03:00 PM", title: "Hakone Jinja Cedar Shrine", detail: "Ascend a wet stone staircase flanked by enormous moss-carpeted cedar trunks." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Bakery & Table Hakone", item: "Freshly-baked honey toast overlooking the misty lake" }
-    ],
-    transport: [
-      { type: "Boat", detail: "Lake Ashi sightseeing boat to Motohakone." }
-    ],
-    notes: "The lake waters are deep and perfectly quiet. Soak in the morning silence.",
-    documents: []
-  },
-  {
-    dayNumber: 8,
-    title: "Kyoto: The Bullet Train & Lanterns",
-    date: getCalendarDate(7),
-    activities: [
-      { time: "10:00 AM", title: "Shinkansen Bullet Train West", detail: "Watch the Japanese countryside blur into beautiful watercolor ribbons at 200mph while sipping green bento tea." },
-      { time: "06:30 PM", title: "Gion Paper Lantern Walk", detail: "Walk down wooden lanes beside Shirakawa Canal. Listen for the soft click-clack of wooden sandals (geta) of passing geishas." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Ekiben Station Box", item: "Kyoto-style pressed sushi box with pickled plum and ginger" },
-      { type: "Dinner", place: "Gion Okaru", item: "Curry udon noodles inside a historical lantern-lit dining room" }
-    ],
-    transport: [
-      { type: "Bullet Train", detail: "Tokaido Shinkansen bullet train from Odawara directly to Kyoto Station (2 hours)." }
-    ],
-    notes: "Keep voices soft in Gion. It is a peaceful residential district of deep heritage.",
-    documents: [
-      { name: "Kyoto Machiya Reservation", id: "MACH-KYO-41", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KyotoMachiyaTraditionalInnCheckIn" }
-    ]
-  },
-  {
-    dayNumber: 9,
-    title: "Gold Foil & Zen Raked Sand",
-    date: getCalendarDate(8),
-    activities: [
-      { time: "09:00 AM", title: "The Golden Pavilion (Kinkaku-ji)", detail: "Marvel at a golden temple shining brightly over a reflecting mirror pond filled with ancient carp." },
-      { time: "02:00 PM", title: "Ryoan-ji Rock Garden Meditation", detail: "Sit on wooden temple steps, silently studying fifteen stones placed meticulously in a sea of raked white gravel." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Kinkaku-ji Soba", item: "Cold buckwheat noodles dipped in dashi with mountain yam" },
-      { type: "Dinner", place: "Izusen Tofubou", item: "Zen vegetarian multi-dish tofu meal served in stacked red lacquered bowls" }
-    ],
-    transport: [
-      { type: "Bus", detail: "Kyoto City Bus #205 north to Kinkakuji-michi." }
-    ],
-    notes: "Try to count all 15 stones at Ryoan-ji. From any angle, at least one is always hidden.",
-    documents: []
-  },
-  {
-    dayNumber: 10,
-    title: "The Bamboo Sough & River Dining",
-    date: getCalendarDate(9),
-    activities: [
-      { time: "08:30 AM", title: "Arashiyama Bamboo Grove", detail: "Walk inside towering green arches. Mountain fog rolls over Arashiyama's slopes." },
-      { time: "01:30 PM", title: "Otagi Nenbutsu-ji Temple", detail: "Count 1,200 whimsical stone head statues. Find the funniest one tucked behind wild ferns." }
-    ],
-    meals: [
-      { type: "Breakfast", place: "Saga-Toriimoto Tea House", item: "Pounded rice mochi with hot roasted mugwort tea" },
-      { type: "Lunch", place: "Shoraian Kaiseki", item: "Twelve courses of handmade tofu over the rushing mountain river" }
-    ],
-    transport: [
-      { type: "Train", detail: "Saga-Scenic railway or Hankyu Arashiyama line." }
-    ],
-    notes: "Bring an umbrella. Mountain rain in Arashiyama makes the moss glow like neon emeralds.",
-    documents: [
-      { name: "Shoraian River Dining", id: "RES-99120", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ShoraianLunchKyoto" }
-    ]
-  },
-  {
-    dayNumber: 11,
-    title: "The Vermillion Mountain (Fushimi Inari)",
-    date: getCalendarDate(10),
-    activities: [
-      { time: "07:00 AM", title: "Fushimi Inari Shrine Hike", detail: "Ascend a mountain path through 10,000 closely-spaced vermillion shrine gates. Shafts of morning light filter through dense evergreen forest." },
-      { time: "02:00 PM", title: "Sanjusangendo Hall of 1001 Statues", detail: "Step into an ancient wooden hall housing 1,001 golden-faced statues of Kannon, carved out of Japanese cypress." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Inari Roadside Stalls", item: "Sweet tofu-skin pockets (Inari sushi) and flame-grilled quail" },
-      { type: "Dinner", place: "Gyoza Hohei", item: "Thin-wrapper ginger gyoza with pickled cabbage" }
-    ],
-    transport: [
-      { type: "Train", detail: "JR Nara Line from Kyoto Station to Inari Station (5 mins)." }
-    ],
-    notes: "The higher you climb Fushimi Inari, the quieter the trails become. The summit is incredibly peaceful.",
-    documents: []
-  },
-  {
-    dayNumber: 12,
-    title: "Uji: The Cradle of Green Tea",
-    date: getCalendarDate(11),
-    activities: [
-      { time: "10:30 AM", title: "Uji River Tea Plantations", detail: "Wander past rolling slopes of dense jade green tea bushes. Clean smell of ground matcha leaves in the air." },
-      { time: "01:00 PM", title: "Byodoin Temple Phoenix Hall", detail: "Study a floating red wooden temple hall representing the pure Buddhist paradise, built over a wide pond." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Nakamura Tokichi", item: "Matcha-infused buckwheat noodles with rich green tea jelly" }
-    ],
-    transport: [
-      { type: "Train", detail: "JR Nara Line southward to Uji Station." }
-    ],
-    notes: "Uji makes the finest green tea in Japan. Take home a small tin of ceremonial matcha.",
-    documents: []
-  },
-  {
-    dayNumber: 13,
-    title: "Nara: Whispering Deer & Stone Lanterns",
-    date: getCalendarDate(12),
-    activities: [
-      { time: "10:00 AM", title: "Todai-ji Temple Great Hall", detail: "Pass beneath massive wooden guardians into the largest timber building in the world housing the giant bronze Buddha." },
-      { time: "02:30 PM", title: "Kasuga Taisha Lantern Walk", detail: "Hike silent gravel forest trails enclosed by cedar trees. 3,000 stone lanterns stand carpeted in green moss." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Edogawa Naramachi", item: "Freshly-grilled savory unagi served inside a 150-year-old merchant home" },
-      { type: "Snack", place: "Nakatanidou Mochi", item: "Mugwort rice cakes freshly pounded before our eyes" }
-    ],
-    transport: [
-      { type: "Train", detail: "Kintetsu express line from Kyoto straight to Nara Station (45 mins)." }
-    ],
-    notes: "Deer in Nara are sacred. Bow to them, and they will bow back before accepting a cracker.",
-    documents: [
-      { name: "Kintetsu Rail Pass", id: "PASS-NARA-552", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=KintetsuNaraPassScanCode" }
-    ]
-  },
-  {
-    dayNumber: 14,
-    title: "Osaka: Neon Glitz & Towering Castles",
-    date: getCalendarDate(13),
-    activities: [
-      { time: "11:00 AM", title: "Osaka Castle Stone Walls", detail: "Explore high stone ramparts and wide deep moats, observing white-and-gold pagoda towers rising above cherry trees." },
-      { time: "06:30 PM", title: "Dotonbori Neon Food Crawl", detail: "Wander under giant mechanical crab signs and towering glowing billboards flashing above the bustling canal." }
-    ],
-    meals: [
-      { type: "Dinner", place: "Acchichi Honpo", item: "Molten hot octopus dough balls (Takoyaki) drizzled with savory sauce" }
-    ],
-    transport: [
-      { type: "Train", detail: "Local rapid lines from Kyoto Station straight to Osaka Station." }
-    ],
-    notes: "Osaka is high-energy, fun, and loud. Prepare for delicious street food!",
-    documents: []
-  },
-  {
-    dayNumber: 15,
-    title: "Himeji: The White Egret Castle",
-    date: getCalendarDate(14),
-    activities: [
-      { time: "10:00 AM", title: "Himeji Castle Keep", detail: "Ascend six steep wooden floors inside Japan's most spectacular surviving castle, looking out at sweeping views of the city below." },
-      { time: "03:00 PM", title: "Koko-en Traditional Gardens", detail: "Walk through nine beautifully connected Edo-period gardens, watching waterfall cascades feeding koi ponds." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Himeji Soba", item: "Ginger-infused dashi buckwheat noodles with sweet bean skin" }
-    ],
-    transport: [
-      { type: "Train", detail: "Shinkansen bullet train from Shin-Osaka directly to Himeji Station (30 mins)." }
-    ],
-    notes: "The wood inside the castle is original from 1609. Walk barefoot and feel the smooth ancient timbers.",
-    documents: [
-      { name: "Himeji Combo Entry Ticket", id: "HIM-TIX-918", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HimejiKokoenJointPassEntry" }
-    ]
-  },
-  {
-    dayNumber: 16,
-    title: "Miyajima: The Floating Torii",
-    date: getCalendarDate(15),
-    activities: [
-      { time: "01:30 PM", title: "Itsukushima Floating Shrine", detail: "Witness the iconic massive red Torii gate standing peacefully in the ocean tides. As water recedes, walk across wet sand to touch it." },
-      { time: "05:00 PM", title: "Mount Misen Ropeway Walk", detail: "Ascend through forested slopes to study ancient shrines where mountain monkeys run beside pine groves." }
-    ],
-    meals: [
-      { type: "Dinner", place: "Miyajima Stalls", item: "Sweet maple-leaf-shaped sweet cakes (Momiji Manju) filled with bean paste" }
-    ],
-    transport: [
-      { type: "Train & Ferry", detail: "Sanyo Line train to Miyajimaguchi, boarding a wooden ferry across the channel." }
-    ],
-    notes: "The sunset over Miyajima's bay is breathtaking. Find a bench on the shoreline to watch the light fade.",
-    documents: [
-      { name: "Miyajima Ferry Pass", id: "FERRY-MIY-2", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=MiyajimaIslandFerryTransitCode" }
-    ]
-  },
-  {
-    dayNumber: 17,
-    title: "Tokyo Return: Shimokitazawa Alleys",
-    date: getCalendarDate(16),
-    activities: [
-      { time: "02:00 PM", title: "Shimokitazawa Thrift Hunting", detail: "Wander quiet, pedestrian-only narrow lanes. Browse shops selling vintage vinyl records and pre-loved woolen sweaters." },
-      { time: "07:30 PM", title: "Farewell Tea Ceremony", detail: "Gather in a cozy hand-crafted wooden tea house, sipping hand-whisked hot matcha as old vinyl jazz plays." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Rojiura Curry Samurai", item: "Thick vegetable soup curry containing twenty charcoal-roasted vegetables" }
-    ],
-    transport: [
-      { type: "Bullet Train", detail: "Shinkansen bullet train back east to Tokyo Station, transfer to hotel." }
-    ],
-    notes: "Pack bags carefully tonight. Let our travel treasures find a safe spot in our suitcases.",
-    documents: []
-  },
-  {
-    dayNumber: 18,
-    title: "Departure: Last Skyward Glance",
-    date: getCalendarDate(17),
-    activities: [
-      { time: "11:00 AM", title: "Souvenir Shopping at Tokyo Station", detail: "Collect box treats like banana sponge cakes and matcha sweets for friends back home." },
-      { time: "03:00 PM", title: "Haneda Airport Departure", detail: "Board the departure flight, looking down at Tokyo's sprawling cityscape fade into the soft ocean clouds." }
-    ],
-    meals: [
-      { type: "Lunch", place: "Rokurinsha Ramen", item: "Thick dipping noodles (tsukemen) in a slow-simmered seafood-pork broth" }
-    ],
-    transport: [
-      { type: "Monorail", detail: "Tokyo Monorail back to Haneda International Terminal." }
-    ],
-    notes: "Carry the quiet forest memories of Japan inside our hearts forever. Farewell!",
-    documents: [
-      { name: "Haneda Flight Boarding", id: "FLT-HDN-772", qrCodeUrl: "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HanedaDepartureFlightCheckInCode" }
-    ]
-  }
-];
+// --- SUB-COMPONENTS ---
 
-export default function App() {
-  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0);
-  const [activeTab, setActiveTab] = useState<string>('activities');
-  const [scribbles, setScribbles] = useState<SketchInstance[]>([]);
+const AmbientLayer: React.FC = () => {
+  const [fireflies, setFireflies] = useState<any[]>([]);
+  const [soots, setSoots] = useState<any[]>([]);
 
-  const currentDay = TRIP_DAYS[selectedDayIdx];
-
-  // Dynamically scatter gorgeous drawings down the margins
   useEffect(() => {
-    const pageHeight = document.documentElement.scrollHeight || 1200;
-    const count = Math.max(4, Math.floor(pageHeight / 450));
-    const generated: SketchInstance[] = [];
-
-    for (let i = 0; i < count; i++) {
-      const isLeft = Math.random() > 0.5;
-      generated.push({
-        id: i,
-        index: Math.floor(Math.random() * GHIBLI_SKETCHES.length),
-        x: isLeft ? `${Math.random() * 3 + 1}%` : `${Math.random() * 3 + 92}%`,
-        y: `${(i / count) * 82 + Math.random() * 8 + 6}%`,
-        scale: Math.random() * 0.3 + 0.8, // Elegant, highly visible sizes
-        rotation: Math.floor(Math.random() * 40 - 20),
-        opacity: Math.random() * 0.2 + 0.65,
+    const fInterval = setInterval(() => {
+      setFireflies((prev) => {
+        const next = [...prev, {
+          id: Math.random(),
+          left: `${Math.random() * 95}vw`,
+          top: `${40 + Math.random() * 50}vh`,
+          size: `${3 + Math.random() * 4}px`,
+          duration: `${5 + Math.random() * 7}s`,
+        }];
+        if (next.length > 12) next.shift();
+        return next;
       });
-    }
-    setScribbles(generated);
-  }, [selectedDayIdx]);
+    }, 2500);
 
-  const tabs = [
-    { id: 'activities', label: '🎒 Itinerary' },
-    { id: 'meals', label: '🍙 Tea & Feast' },
-    { id: 'transport', label: '🚂 Journey' },
-    { id: 'notes', label: '✏️ Musings' },
-    { id: 'documents', label: '🎟️ Passes' }
-  ];
+    const sInterval = setInterval(() => {
+      if (Math.random() < 0.3) {
+        setSoots((prev) => {
+          const next = [...prev, {
+            id: Math.random(),
+            left: `${Math.random() * 90}vw`,
+            duration: `${8 + Math.random() * 6}s`,
+          }];
+          if (next.length > 5) next.shift();
+          return next;
+        });
+      }
+    }, 3500);
+
+    return () => {
+      clearInterval(fInterval);
+      clearInterval(sInterval);
+    };
+  }, []);
 
   return (
-    <div className="relative min-h-screen py-12 px-4 md:px-16 flex flex-col justify-center">
-      
-      {/* 1. SCATTERED GHIBLI ARTWORK (MARGINS) */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
-        {scribbles.map((s) => (
-          <div
-            key={s.id}
-            className="botanical-sketch"
-            style={{
-              position: 'absolute',
-              left: s.x,
-              top: s.y,
-              transform: `rotate(${s.rotation}deg) scale(${s.scale})`,
-              opacity: s.opacity,
-              width: '75px',
-              height: '75px',
-            }}
-          >
-            {GHIBLI_SKETCHES[s.index]}
-          </div>
-        ))}
-      </div>
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      <div className="absolute top-10 w-44 h-16 opacity-30 bg-[#ede6d8] rounded-full filter blur-xl" style={{ animation: 'cloudDrift 80s linear infinite' }} />
+      <div className="absolute top-44 w-60 h-20 opacity-20 bg-[#ede6d8] rounded-full filter blur-xl" style={{ animation: 'cloudDrift 110s linear infinite', animationDelay: '-30s' }} />
+      {fireflies.map((f) => (
+        <div key={f.id} className="absolute rounded-full bg-[#e8a830] opacity-0 shadow-[0_0_8px_#e8a830]" style={{ left: f.left, top: f.top, width: f.size, height: f.size, animation: `fireflyFloat ${f.duration} ease-in-out infinite` }} />
+      ))}
+      {soots.map((s) => (
+        <div key={s.id} className="absolute w-3 h-3 bg-[#1e1208] rounded-full opacity-0 flex items-center justify-center" style={{ left: s.left, top: '-20px', animation: `sootFall ${s.duration} linear forwards` }}>
+          <div className="absolute w-[3px] h-[3px] bg-white rounded-full left-[2px] top-[4px] flex items-center justify-center"><div className="w-[1.2px] h-[1.2px] bg-black rounded-full" /></div>
+          <div className="absolute w-[3px] h-[3px] bg-white rounded-full right-[2px] top-[4px] flex items-center justify-center"><div className="w-[1.2px] h-[1.2px] bg-black rounded-full" /></div>
+          <div className="absolute inset-0 border border-dashed border-[#1e1208] rounded-full scale-110" />
+        </div>
+      ))}
+    </div>
+  );
+};
 
-      <div className="max-w-5xl mx-auto w-full relative z-10">
-        
-        {/* 2. THE DIARY TAB NAVIGATOR (Pressed ticket look) */}
-        <div className="flex justify-center gap-2 mb-10 flex-wrap max-w-4xl mx-auto">
-          {TRIP_DAYS.map((day, idx) => (
-            <button
-              key={day.dayNumber}
-              onClick={() => {
-                setSelectedDayIdx(idx);
-                setActiveTab('activities');
-              }}
-              style={{
-                filter: 'url(#hand-drawn-sketch)',
-                transform: `rotate(${idx % 2 === 0 ? -1.5 : 2.2}deg)`,
-              }}
-              className={`px-3 py-1.5 text-xs md:text-sm font-semibold border-2 border-[#544436] transition-transform hover:scale-105 active:scale-95 shadow-md ${
-                selectedDayIdx === idx
-                  ? 'bg-[#c3d3be] text-[#243521] border-[#243521] font-bold'
-                  : 'bg-[#faf8f5] text-[#5c4a37]'
-              }`}
-            >
-              Day {day.dayNumber}
+const Header: React.FC = () => (
+  <header className="app-header">
+    <div className="header-left">
+      <h1>The Wanderer's Sketchbook</h1>
+      <p>An 18-Day Journey Through Landscapes, Flavors, and Hidden Valleys</p>
+    </div>
+    <svg width="84" height="84" style={{ position: 'absolute', right: '32px', top: '12px', opacity: 0.07, color: '#1e1208', pointerEvents: 'none' }} viewBox="0 0 100 100">
+      <ellipse cx="50" cy="55" rx="32" ry="26" fill="currentColor" />
+      <ellipse cx="40" cy="24" rx="5" ry="12" fill="currentColor" transform="rotate(-15 40 24)" />
+      <ellipse cx="60" cy="24" rx="5" ry="12" fill="currentColor" transform="rotate(15 60 24)" />
+      <circle cx="38" cy="48" r="4" fill="currentColor" />
+      <circle cx="62" cy="48" r="4" fill="currentColor" />
+      <path d="M 32 55 Q 50 68 68 55" stroke="currentColor" strokeWidth="2" fill="none" />
+      <line x1="26" y1="48" x2="12" y2="46" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="26" y1="52" x2="10" y2="52" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="74" y1="48" x2="88" y2="46" stroke="currentColor" strokeWidth="1.5" />
+      <line x1="74" y1="52" x2="90" y2="52" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  </header>
+);
+
+const DayNav: React.FC = () => {
+  const { activeDay, setActiveDay } = useStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const activeEl = containerRef.current?.querySelector(`[data-day="${activeDay}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [activeDay]);
+
+  return (
+    <div className="nav-container">
+      <div ref={containerRef} className="day-nav">
+        {Array.from({ length: 18 }, (_, i) => {
+          const day = i + 1;
+          const reg = regionMap[day];
+          const color = regionColors[reg];
+          const isActive = activeDay === day;
+          return (
+            <button key={day} data-day={day} onClick={() => setActiveDay(day)} className={`nav-btn ${isActive ? 'active' : ''}`}>
+              <div className="nav-btn-color-bar" style={{ backgroundColor: color }} />
+              DAY {day}
             </button>
-          ))}
-        </div>
-
-        {/* 3. LEATHER-BOUND SKETCHBOOK CONTAINER */}
-        <div className="flex rounded-lg overflow-hidden shadow-2xl border-4 border-[#331c13]">
-          
-          {/* Leather spine of the notebook */}
-          <div className="w-8 md:w-12 leather-spine flex flex-col items-center justify-around py-12 relative">
-            {/* Brass binding rings */}
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="w-4 h-4 rounded-full bg-gradient-to-br from-[#d4af37] to-[#8c6d1b] border border-[#52441c] shadow-md relative">
-                <div className="absolute inset-1 rounded-full bg-[#3e2c0e] opacity-60"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Sketchbook interior page */}
-          <div className="flex-1 sketchbook-page p-6 md:p-12">
-            
-            {/* Page Header */}
-            <div className="border-b-2 border-dashed border-[#dcd1be] pb-6 mb-8 text-center md:text-left">
-              <span className="font-serif tracking-widest text-[#a1553c] text-xs font-bold uppercase block mb-1">
-                Adventure Log / {currentDay.date}, {TRIP_YEAR}
-              </span>
-              <h1 className="font-serif text-2xl md:text-4xl italic font-bold tracking-tight text-[#2b1f14]">
-                {currentDay.title}
-              </h1>
-            </div>
-
-            {/* Folder tab buttons */}
-            <div className="flex flex-wrap gap-1 mb-8">
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`journal-tab px-4 py-2.5 text-xs md:text-sm font-bold ${
-                      isActive ? 'journal-tab-active' : ''
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* TAB PANELS WITH CUSTOM WATERCOLOR WASH TINTS */}
-            <div className="min-h-[320px]">
-              
-              {/* TAB CONTENT: ITINERARY */}
-              {activeTab === 'activities' && (
-                <div className="space-y-8 watercolor-wash-green p-6 rounded-md border border-[#d9e2d5] hand-inked">
-                  <h3 className="font-serif text-2xl font-bold italic text-[#394a2c]">
-                    👣 The Day's Wandering
-                  </h3>
-                  <div className="space-y-6">
-                    {currentDay.activities.map((act, index) => (
-                      <div key={index} className="flex gap-6 items-start">
-                        <span className="font-serif italic font-bold text-[#b45d3e] text-lg min-w-[85px]">
-                          {act.time}
-                        </span>
-                        <div className="border-l-2 border-[#d0dfd4] pl-4">
-                          <h4 className="font-serif font-bold text-lg text-[#251b11]">{act.title}</h4>
-                          <p className="text-sm md:text-base leading-relaxed text-[#504539] font-serif mt-1 italic">
-                            "{act.detail}"
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONTENT: FEASTS */}
-              {activeTab === 'meals' && (
-                <div className="space-y-8 watercolor-wash-amber p-6 rounded-md border border-[#e8ded0] hand-inked">
-                  <h3 className="font-serif text-2xl font-bold italic text-[#634b35]">
-                    🍙 Food, Teas & Sweet Bites
-                  </h3>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {currentDay.meals.map((meal, index) => (
-                      <div key={index} className="p-5 border border-dashed border-[#cfc4b3] rounded bg-[#faf8f5]/80 shadow-sm">
-                        <span className="bg-[#e2cebe] text-[#543b23] text-xs font-serif font-bold px-2.5 py-1 rounded">
-                          {meal.type}
-                        </span>
-                        <h4 className="font-serif font-bold text-lg mt-3 text-[#2c1d13]">{meal.place}</h4>
-                        <p className="text-sm md:text-base leading-relaxed text-[#504539] italic mt-1 font-serif">
-                          "{meal.item}"
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONTENT: TRANSIT */}
-              {activeTab === 'transport' && (
-                <div className="space-y-6 watercolor-wash-blue p-6 rounded-md border border-[#d5dee2] hand-inked">
-                  <h3 className="font-serif text-2xl font-bold italic text-[#2e434c]">
-                    🚂 Journey Details & Routes
-                  </h3>
-                  <div className="space-y-5">
-                    {currentDay.transport.map((trans, index) => (
-                      <div key={index} className="flex gap-4 items-start bg-[#fcf9f2] p-4 rounded border border-[#d2d9dc]">
-                        <span className="text-2xl mt-1">
-                          {trans.type === 'Train' ? '🚂' : '🚶'}
-                        </span>
-                        <div>
-                          <span className="font-serif font-bold text-[#2e434c] block text-lg">{trans.type}</span>
-                          <p className="text-sm md:text-base text-[#504539] leading-relaxed mt-0.5">{trans.detail}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONTENT: MUSINGS */}
-              {activeTab === 'notes' && (
-                <div className="space-y-6 hand-inked p-6 bg-[#f7f5ee] rounded border border-[#e2dec9]">
-                  <h3 className="font-serif text-2xl font-bold italic text-[#4f4335]">
-                    ✏️ Traveler's Scrapbook Notes
-                  </h3>
-                  <div className="p-6 italic text-lg md:text-xl leading-relaxed text-[#4d3c2e] font-serif relative border-l-4 border-[#b45d3e] bg-[#fdfcfa] rounded-r shadow-inner">
-                    <span className="absolute top-2 right-4 text-4xl opacity-15">📌</span>
-                    "{currentDay.notes}"
-                  </div>
-                </div>
-              )}
-
-              {/* TAB CONTENT: PASSES */}
-              {activeTab === 'documents' && (
-                <div className="space-y-6 hand-inked p-6 bg-[#faf8f5] rounded border border-[#e8ded0]">
-                  <h3 className="font-serif text-2xl font-bold italic text-[#543b23]">
-                    🎟️ Lodging & Transit Tickets
-                  </h3>
-                  <div className="flex flex-wrap gap-8 justify-center md:justify-start items-center">
-                    {currentDay.documents.map((doc, index) => (
-                      <div key={index} className="flex flex-col md:flex-row gap-6 items-center p-5 border border-[#5a4f43]/40 rounded-lg bg-[#fdfdfd] shadow-md hover:shadow-lg transition-shadow">
-                        <div className="p-3 pb-8 bg-[#fafafa] border border-gray-300 shadow-md transform rotate-1 flex flex-col items-center">
-                          <img 
-                            src={doc.qrCodeUrl} 
-                            alt="Reservation Access Code" 
-                            className="w-32 h-36 border border-gray-200" 
-                          />
-                          <span className="text-[10px] text-gray-500 mt-2 font-mono uppercase tracking-widest">Aged Scan Entry</span>
-                        </div>
-                        
-                        <div className="text-center md:text-left space-y-2">
-                          <h4 className="font-serif font-bold text-xl text-[#2c1d13]">{doc.name}</h4>
-                          <p className="text-xs text-gray-500 font-mono tracking-wider">REGISTRY CODE: {doc.id}</p>
-                          <button className="mt-2 px-4 py-1.5 bg-[#697d70] hover:bg-[#57695c] text-white text-xs font-bold font-serif tracking-wider uppercase rounded shadow transition-colors">
-                            View Parchment Ticket
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );
-}
+};
+
+const RegionLegend: React.FC = () => (
+  <div className="region-legend">
+    {Object.entries(regionColors).map(([name, color]) => (
+      <div key={name} className="legend-item">
+        <span className="legend-dot" style={{ backgroundColor: color, boxShadow: `0 0 4px ${color}` }} />
+        {name}
+      </div>
+    ))}
+  </div>
+);
+
+const ArtVignette: React.FC<{ day: number }> = ({ day }) => {
+  const renderSVGContent = () => {
+    switch (day) {
+      case 1:
+        return (
+          <g stroke="#1e1208" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 20 50 Q 20 90 60 90 Q 100 90 100 50 Z" fill="#f2e8d0" />
+            <path d="M 15 50 L 105 50" strokeWidth="3" />
+            <path d="M 40 90 L 40 95 L 80 95 L 80 90" />
+            <path d="M 30 50 Q 35 38 40 50 Q 45 38 50 50 Q 55 38 60 50 Q 65 38 70 50" strokeWidth="1.5" />
+            <path className="steam-line" d="M 45 25 Q 42 15 47 5" strokeWidth="1.5" opacity="0.6" style={{ animationDelay: '0.2s' }} />
+            <path className="steam-line" d="M 60 25 Q 58 12 62 5" strokeWidth="1.5" opacity="0.6" style={{ animationDelay: '0.8s' }} />
+          </g>
+        );
+      case 6:
+        return (
+          <g stroke="#1e1208" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="30" y1="120" x2="30" y2="0" strokeWidth="4" />
+            <line x1="60" y1="120" x2="60" y2="0" strokeWidth="6" />
+            <line x1="28" y1="80" x2="32" y2="80" />
+            <line x1="57" y1="50" x2="63" y2="50" />
+            <path className="float-item" d="M 60 50 Q 45 40 30 42" fill="#3a5c32" opacity="0.75" />
+          </g>
+        );
+      default:
+        return (
+          <g stroke="#1e1208" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M 20 100 Q 60 40 100 40 Q 140 40 180 100 Z" fill="#ede6d8" />
+            <path d="M 85 62 L 95 72 L 105 65 L 115 75 Z" />
+            <circle cx="140" cy="50" r="14" fill="#b83020" opacity="0.15" />
+          </g>
+        );
+    }
+  };
+  const isPortrait = day === 6;
+  return (
+    <svg className="art-svg drop-shadow-sm select-none" viewBox={isPortrait ? "0 0 120 200" : "0 0 200 120"} style={{ maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)', WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 75%, rgba(0,0,0,0) 100%)' }}>
+      {renderSVGContent()}
+    </svg>
+  );
+};
+
+const ActivityItem: React.FC<{ activity: any; index: number }> = ({ activity, index }) => {
+  const { activeDay, editMode, userEdits, updateActivityEdit } = useStore();
+  const dayHaikus = haikus[activeDay] || [];
+  const savedKey = `${activeDay}_${index}`;
+  const editedTitle = userEdits.activities[savedKey]?.title;
+  const editedDesc = userEdits.activities[savedKey]?.description;
+  const displayTitle = editedTitle !== undefined ? editedTitle : activity.title;
+  const displayHaiku = editedDesc !== undefined ? editedDesc : (dayHaikus[index] || "");
+
+  return (
+    <div className="timeline-item">
+      <span className="timeline-bullet">🌿</span>
+      <span className="timeline-time">{activity.time}</span>
+      <h3 contentEditable={editMode} suppressContentEditableWarning onBlur={(e) => updateActivityEdit(activeDay, index, 'title', e.currentTarget.innerText)} className={`timeline-title focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1' : ''}`}>{displayTitle}</h3>
+      <p contentEditable={editMode} suppressContentEditableWarning onBlur={(e) => updateActivityEdit(activeDay, index, 'description', e.currentTarget.innerText)} className={`timeline-desc focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1 mt-2' : ''}`}>{displayHaiku}</p>
+    </div>
+  );
+};
+
+const MealsSection: React.FC = () => {
+  const { activeDay, editMode, userEdits, updateMealEdit } = useStore();
+  const dayMeals = meals[activeDay];
+  const mealTypes: Array<{ key: 'breakfast' | 'lunch' | 'dinner'; label: string; icon: string }> = [
+    { key: 'breakfast', label: 'Breakfast', icon: '☀' }, { key: 'lunch', label: 'Lunch', icon: '◑' }, { key: 'dinner', label: 'Dinner', icon: '☽' }
+  ];
+  return (
+    <div className="meals-container">
+      <h4 className="meals-header">Today's Table</h4>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {mealTypes.map(({ key, label, icon }) => {
+          const defaultMeal = dayMeals?.[key];
+          const editedText = userEdits.meals[activeDay]?.[key];
+          const displayText = editedText !== undefined ? editedText : (defaultMeal?.text || "");
+          return (
+            <div key={key} className={`meal-row ${defaultMeal?.booked ? 'booked' : ''}`}>
+              <div className="meal-label-col">
+                <span className="text-base">{icon}</span>
+                <span className="meal-type">{label}</span>
+              </div>
+              <p contentEditable={editMode} suppressContentEditableWarning onBlur={(e) => updateMealEdit(activeDay, key, e.currentTarget.innerText)} className={`meal-text focus:outline-none ${editMode ? 'border-b border-dashed border-[#c87e18] bg-white bg-opacity-40 px-1' : ''}`}>{displayText}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const ReservationsPanel: React.FC = () => {
+  const { activeDay, reservations, updateReservation } = useStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const res: Reservation = reservations[activeDay] || {};
+
+  const handleInputChange = (field: keyof Reservation, value: string) => {
+    updateReservation(activeDay, { [field]: value });
+  };
+
+  const addBooking = () => {
+    const list = res.restaurantBookings || [];
+    updateReservation(activeDay, { restaurantBookings: [...list, { name: '', time: '', notes: '' }] });
+  };
+
+  const updateBooking = (idx: number, key: keyof RestaurantBooking, value: string) => {
+    const list = [...(res.restaurantBookings || [])];
+    list[idx] = { ...list[idx], [key]: value };
+    updateReservation(activeDay, { restaurantBookings: list });
+  };
+
+  return (
+    <div style={{ marginTop: '32px', border: '1px solid #cdbf9c', borderRadius: '4px', backgroundColor: '#e6d8be', opacity: 0.85 }}>
+      <button onClick={() => setIsOpen(!isOpen)} style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'Crimson Text, serif', fontSize: '14px', color: '#1e1208', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><BookOpen style={{ width: '16px', height: '16px' }} />Offline Booking & Lodging Records</span>
+        {isOpen ? <ChevronUp style={{ width: '16px', height: '16px' }} /> : <ChevronDown style={{ width: '16px', height: '16px' }} />}
+      </button>
+      {isOpen && (
+        <div style={{ padding: '16px', borderTop: '1px solid #cdbf9c', display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'Crimson Text, serif', fontSize: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <h5 style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>🏨 Hotel / Ryokan Details</h5>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+              <input type="text" placeholder="Confirmation Code" value={res.hotelConfirmation || ''} onChange={(e) => handleInputChange('hotelConfirmation', e.target.value)} style={{ backgroundColor: '#f2e8d0', border: '1px solid #cdbf9c', padding: '8px', borderRadius: '4px', outline: 'none' }} />
+              <input type="text" placeholder="Full Hotel Address" value={res.hotelAddress || ''} onChange={(e) => handleInputChange('hotelAddress', e.target.value)} style={{ backgroundColor: '#f2e8d0', border: '1px solid #cdbf9c', padding: '8px', borderRadius: '4px', outline: 'none' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h5 style={{ fontWeight: 'bold', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>🍽 Dining Reservations</h5>
+              <button onClick={addBooking} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--rc)' }}><Plus style={{ width: '14px', height: '14px' }} /> Add</button>
+            </div>
+            {(res.restaurantBookings || []).map((booking, idx) => (
+              <div key={idx} style={{ display: 'flex', gap: '8px', backgroundColor: '#f2e8d0', padding: '12px', borderRadius: '4px', border: '1px solid #cdbf9c', alignItems: 'center' }}>
+                <input type="text" placeholder="Name" value={booking.name} onChange={(e) => updateBooking(idx, 'name', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <input type="text" placeholder="Time" value={booking.time} onChange={(e) => updateBooking(idx, 'time', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <input type="text" placeholder="Notes" value={booking.notes} onChange={(e) => updateBooking(idx, 'notes', e.target.value)} style={{ backgroundColor: 'transparent', border: 'none', borderBottom: '1px solid #cdbf9c', padding: '4px', outline: 'none', width: '30%' }} />
+                <button onClick={() => {
+                  const list = (res.restaurantBookings || []).filter((_, i) => i !== idx);
+                  updateReservation(activeDay, { restaurantBookings: list });
+                }} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#b83020', padding: '4px' }}>
+                  <Trash style={{ width: '16px', height: '16px' }} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const JournalPane: React.FC = () => {
+  const { activeDay } = useStore();
+  const region = regionMap[activeDay];
+  const color = regionColors[region];
+  const metadata = dayMeta[activeDay];
+
+  const vignetteIdx = vignettePlacement[activeDay];
+  const styleStr = vignetteStyle[activeDay] || "float:right;width:180px;";
+  const parsedStyles = Object.fromEntries(
+    styleStr.split(';').map(item => {
+      const [k, v] = item.split(':');
+      if (!k || !v) return [];
+      return [k.trim().replace(/-./g, x => x[1].toUpperCase()), v.trim()];
+    }).filter(x => x.length > 0)
+  );
+
+  const elements: React.ReactNode[] = [];
+  (activities[activeDay] || []).forEach((act, idx) => {
+    if (vignetteIdx !== null && idx === vignetteIdx) {
+      elements.push(<div key="v" style={parsedStyles} className="hidden sm:block"><ArtVignette day={activeDay} /></div>);
+    }
+    elements.push(<ActivityItem key={idx} activity={act} index={idx} />);
+  });
+  if (vignetteIdx === null) {
+    elements.push(<div key="v" style={parsedStyles} className="hidden sm:block"><ArtVignette day={activeDay} /></div>);
+  }
+
+  return (
+    <div className="journal-pane" style={{ '--rc': color } as React.CSSProperties}>
+      
+      {/* Notebook Binder Rings (Top and bottom layout overlay style) */}
+      <div className="absolute left-3 top-0 bottom-0 flex flex-col justify-around pointer-events-none opacity-20 z-20">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="w-4 h-4 rounded-full border-2 border-dashed border-[#544436]"></div>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', paddingBottom: '96px', paddingLeft: '16px' }}>
+        <div>
+          <span className="region-tag">{region} Region</span>
+          <h2 className="day-title"><span style={{ color: color }}>〜</span> {metadata.title}</h2>
+          <div className="lodging-badge-row">
+            <span className="lodging-badge">LODGING</span>
+            <span className="lodging-name">{metadata.lodging}</span>
+          </div>
+          <div style={{ height: '2px', width: '100%', background: `linear-gradient(to right, ${color}, #cdbf9c, transparent)`, marginTop: '12px' }} />
+        </div>
+        <div className="timeline-container">{elements}</div>
+        <MealsSection />
+        <ReservationsPanel />
+      </div>
+    </div>
+  );
+};
+
+const getPinIconUrl = (type: string, color: string) => {
+  const icons: Record<string, string> = {
+    hotel: `<path d="M6 17v-5H4l8-7 8 7h-2v5h-5v-4H9v4H6z" fill="#fff"/>`,
+    restaurant: `<path d="M4 11h16v1H4zm3-6h2v5H7zm4 0h2v5h-2zm4 0h2v5h-2z" fill="#fff"/>`,
+    museum: `<path d="M4 18h16v1H4zm1-3h2v2H5zm4 0h2v2H9zm4 0h2v2h-2zm4 0h2v2h-2zm-12-6l7-5 7 5z" fill="#fff"/>`,
+    shop: `<path d="M17 18H7c-1.1 0-2-.9-2-2V7c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2zM9 5c0-1.66 1.34-3 3-3s3 1.34 3 3H9z" fill="#fff"/>`,
+    transit: `<path d="M4 16c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-1h4v1c0 .55.45 1 1 1h2c.55 0 1-.45 1-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v11z" fill="#fff"/>`
+  };
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${color}"/><circle cx="12" cy="9" r="6" fill="#fff" fill-opacity="0.2"/>${icons[type] || icons.transit}</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+const MapEngine: React.FC<{ activeDay: number }> = ({ activeDay }) => {
+  const googleMap = useMap('travel_map');
+  const [markers, setMarkers] = useState<any[]>([]);
+  const [polyline, setPolyline] = useState<any>(null);
+
+  useEffect(() => {
+    if (!googleMap) return;
+    const google = (window as any).google;
+    if (!google) return;
+
+    markers.forEach(m => m.setMap(null));
+    if (polyline) polyline.setMap(null);
+
+    const dayActs = activities[activeDay] || [];
+    const hotel = hotelAnchors[activeDay];
+    const pathCoordinates: any[] = [];
+    const bounds = new google.maps.LatLngBounds();
+    const newMarkers: any[] = [];
+
+    if (hotel) {
+      const loc = { lat: hotel.lat, lng: hotel.lng };
+      bounds.extend(loc);
+      pathCoordinates.push(loc);
+      const marker = new google.maps.Marker({
+        position: loc, map: googleMap, title: hotel.name,
+        icon: { url: getPinIconUrl('hotel', '#b83020'), scaledSize: new google.maps.Size(32, 32) }
+      });
+      newMarkers.push(marker);
+    }
+
+    dayActs.forEach((act) => {
+      const loc = { lat: act.lat, lng: act.lng };
+      bounds.extend(loc);
+      pathCoordinates.push(loc);
+      const marker = new google.maps.Marker({
+        position: loc, map: googleMap, title: act.title,
+        icon: { url: getPinIconUrl(act.type, '#c87e18'), scaledSize: new google.maps.Size(32, 32) }
+      });
+      newMarkers.push(marker);
+    });
+
+    if (hotel && hotel.loop) {
+      pathCoordinates.push({ lat: hotel.lat, lng: hotel.lng });
+    }
+    setMarkers(newMarkers);
+
+    if (pathCoordinates.length > 1) {
+      const newPolyline = new google.maps.Polyline({
+        path: pathCoordinates, strokeOpacity: 0,
+        icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3, strokeColor: '#c87e18' }, offset: '0', repeat: '15px' }],
+        map: googleMap
+      });
+      setPolyline(newPolyline);
+    }
+    if (pathCoordinates.length > 0) {
+      googleMap.fitBounds(bounds, 50);
+    }
+  }, [activeDay, googleMap]);
+
+  return null;
+};
+
+const MapPane: React.FC = () => {
+  const { activeDay } = useStore();
+  const [mapType, setMapType] = useState<'roadmap' | 'hybrid'>('roadmap');
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <Map 
+        id="travel_map" 
+        defaultCenter={{ lat: 35.6762, lng: 139.6503 }} 
+        defaultZoom={11} 
+        mapTypeId={mapType} 
+        disableDefaultUI={true} 
+        zoomControl={true} 
+        style={{ width: '100%', height: '100%' }}
+        options={{
+          styles: RETRO_MAP_STYLE,
+          gestureHandling: 'cooperative'
+        }}
+      >
+        <MapEngine activeDay={activeDay} />
+        <MapControl position={ControlPosition.TOP_RIGHT}>
+          <div className="map-controls-overlay">
+            <button onClick={() => setMapType('roadmap')} className={`map-control-btn ${mapType === 'roadmap' ? 'active' : ''}`}>Sketch Map</button>
+            <button onClick={() => setMapType('hybrid')} className={`map-control-btn ${mapType === 'hybrid' ? 'active' : ''}`}>Satellite</button>
+          </div>
+        </MapControl>
+      </Map>
+    </div>
+  );
+};
+
+const EditModeToggle: React.FC = () => {
+  const { editMode, toggleEditMode } = useStore();
+  return (
+    <button onClick={toggleEditMode} className={`fab-btn ${editMode ? 'active' : ''}`}>
+      {editMode ? <Check style={{ width: '20px', height: '20px' }} /> : <Edit3 style={{ width: '20px', height: '20px' }} />}
+    </button>
+  );
+};
+
+// --- MAIN RUNNER LAYOUT ---
+
+const App: React.FC = () => {
+  const { editMode } = useStore();
+  return (
+    <APIProvider apiKey="YOUR_NEW_KEY_HERE">
+      <div className="app-container">
+        <AmbientLayer />
+        <Header />
+        <DayNav />
+        <RegionLegend />
+        <main className="main-content">
+          {/* Notebook cover container on left split */}
+          <section className="journal-pane-wrapper flex flex-row" style={{ boxShadow: editMode ? 'inset 0 0 0 2px var(--amber)' : 'none' }}>
+            {/* Opened Leather Spine binding panel */}
+            <div className="w-4 md:w-6 leather-spine flex flex-col justify-around py-16 relative">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="w-3 h-3 rounded-full bg-gradient-to-br from-[#d4af37] to-[#8c6d1b] border border-[#52441c] shadow-md mx-auto"></div>
+              ))}
+            </div>
+            <JournalPane />
+          </section>
+          <section className="map-pane-wrapper">
+            <MapPane />
+          </section>
+        </main>
+        <EditModeToggle />
+      </div>
+    </APIProvider>
+  );
+};
+
+export default App;
