@@ -1,0 +1,394 @@
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Klee+One:wght@400;600&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --paper:         #f2e8d0;   /* aged parchment background */
+  --paper-dark:    #e6d8be;   /* slightly darker paper */
+  --paper-fold:    #cdbf9c;   /* paper crease / border */
+  --ink:           #1e1208;   /* deep sepia ink */
+  --ink-fade:      #5c4228;   /* faded sepia */
+  --ink-light:     #8c6e4c;   /* light ink / captions */
+  --forest:        #3a5c32;
+  --amber:         #c87e18;
+  --amber-light:   #e8a830;
+  --ghibli-red:    #b83020;
+  --sky:           #7aafcc;
+  --cloud:         #ede6d8;
+}
+
+body {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: 'Crimson Text', serif;
+  overflow: hidden;
+}
+
+/* Master Page layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+}
+
+/* Header style with fixed Totoro watermark scale */
+.app-header {
+  flex-shrink: 0;
+  padding: 24px 40px;
+  border-bottom: 1px dashed var(--paper-fold);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  background-color: var(--paper);
+  z-index: 20;
+}
+.header-left h1 {
+  font-family: 'Crimson Text', serif;
+  font-size: 2.3rem;
+  font-weight: 400;
+  color: var(--ink);
+}
+.header-left p {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-fade);
+  margin-top: 4px;
+}
+
+/* Day Horizontal Nav Bar */
+.nav-container {
+  flex-shrink: 0;
+  background-color: var(--paper-dark);
+  border-bottom: 1px solid var(--paper-fold);
+  z-index: 10;
+}
+.day-nav {
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 14px 40px;
+  display: flex;
+  gap: 12px;
+}
+.day-nav::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for cleaner look */
+}
+.nav-btn {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: 1px solid var(--paper-fold);
+  background-color: var(--paper-dark);
+  color: var(--ink-fade);
+  font-family: 'Crimson Text', serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  min-width: 64px;
+}
+.nav-btn:hover {
+  background-color: #ebdfca;
+}
+.nav-btn.active {
+  background-color: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.nav-btn-color-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+/* Region Legend Row */
+.region-legend {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 10px;
+  background-color: var(--paper-dark);
+  border-top: 1px solid rgba(0,0,0,0.03);
+  border-bottom: 1px solid var(--paper-fold);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* 50/50 Dual Pane responsive split */
+.main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+.journal-pane-wrapper {
+  width: 50%;
+  height: 100%;
+  overflow-y: auto;
+  border-right: 1px solid var(--paper-fold);
+}
+.journal-pane {
+  padding: 40px;
+  position: relative;
+  min-height: 100%;
+  background-image: repeating-linear-gradient(
+    transparent, transparent 27px,
+    rgba(180, 140, 80, 0.07) 27px,
+    rgba(180, 140, 80, 0.07) 28px
+  );
+}
+.journal-pane::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 52px;
+  width: 1px;
+  background-color: rgba(184, 48, 32, 0.15);
+  pointer-events: none;
+  z-index: 5;
+}
+.map-pane-wrapper {
+  width: 50%;
+  height: 100%;
+  position: relative;
+}
+
+/* Inner elements and badges */
+.region-tag {
+  font-family: 'Crimson Text', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--rc);
+  margin-bottom: 8px;
+  display: inline-block;
+}
+.day-title {
+  font-family: 'Crimson Text', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+.lodging-badge-row {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+}
+.lodging-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: var(--rc);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.lodging-name {
+  margin-left: 10px;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-fade);
+}
+
+/* Dashed vertical Thread path */
+.timeline-container {
+  position: relative;
+  margin-left: 12px;
+  padding-left: 28px;
+  border-left: 1.5px dashed var(--rc);
+  margin-top: 24px;
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 32px;
+}
+.timeline-bullet {
+  position: absolute;
+  left: -37.5px;
+  top: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: var(--paper);
+  border: 1px solid var(--rc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+}
+.timeline-time {
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--rc);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 4px;
+}
+.timeline-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.timeline-desc {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--ink-fade);
+  line-height: 1.85;
+  white-space: pre-line;
+}
+
+/* Meals dining table */
+.meals-container {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px dashed var(--paper-fold);
+}
+.meals-header {
+  font-size: 0.75rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--rc);
+  margin-bottom: 16px;
+}
+.meal-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.meal-row.booked {
+  border-left: 4px solid var(--rc);
+  background-color: var(--paper-dark);
+}
+.meal-label-col {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.meal-type {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+.meal-text {
+  font-size: 0.88rem;
+  font-style: italic;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+/* Overlay Controls Map Switchers */
+.map-controls-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background-color: var(--paper);
+  border: 1px solid var(--paper-fold);
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.map-control-btn {
+  padding: 6px 12px;
+  border-radius: 3px;
+  border: none;
+  background: none;
+  font-family: 'Crimson Text', serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink-fade);
+}
+.map-control-btn.active {
+  background-color: var(--amber);
+  color: white;
+}
+
+/* Float custom layout */
+.fab-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 30;
+  padding: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--paper-fold);
+  background-color: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+.fab-btn:hover {
+  transform: scale(1.05);
+}
+.fab-btn.active {
+  background-color: var(--amber);
+  color: white;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .journal-pane-wrapper, .map-pane-wrapper {
+    width: 100%;
+    height: 50vh;
+  }
+  body {
+    overflow-y: auto;
+  }
+}
