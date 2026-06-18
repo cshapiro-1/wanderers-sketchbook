@@ -2729,7 +2729,7 @@ const EditModeToggle: React.FC = () => {
 const App: React.FC = () => {
   const { editMode } = useStore();
   return (
-    <APIProvider apiKey="YOUR_NEW_KEY_HERE">
+    <APIProvider apiKey={import.meta.env.VITE_GOOGLE_MAPS_KEY}>
       <div className="app-container">
         <AmbientLayer />
         <Header />
