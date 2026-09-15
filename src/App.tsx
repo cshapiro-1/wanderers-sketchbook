@@ -1701,44 +1701,45 @@ const DayScrollVignette: React.FC<{ acts: Activity[]; day: number }> = ({ acts, 
 
 // ── RAIN MODE ALTERNATIVE SANCTUARIES ─────────────────────────────────────────
 const RAIN_ALTERNATIVES: Record<number, { title: string; area: string; desc: string; icon: string }> = {
-  1: { title: "Ginza Six & Mitsukoshi Depachika", area: "Ginza", desc: "Skip the rain outside by exploring Ginza's underground luxury food halls — gourmet pastries, seasonal fruit, and warm dashi broth counters.", icon: "🏬" },
-  2: { title: "Omotesando Hills & Covered Cat Street Arcades", area: "Harajuku / Omotesando", desc: "Ghibli is completely indoor; pair it with Tadao Ando's spiral Omotesando Hills complex and sheltered boutique cafes.", icon: "☕" },
-  3: { title: "Tokyo Skytree Solamachi & Akihabara Radio Kaikan", area: "East Tokyo", desc: "Multi-floor indoor retro electronics cathedrals and over 300 covered shops and dining halls beneath Skytree.", icon: "🎮" },
-  4: { title: "Isetan Shinjuku B1/B2 Food Hall & Seiko Museum", area: "Ginza / Shinjuku", desc: "Japan's most celebrated subterranean food market followed by watchmaking gallery floors under glass.", icon: "🍰" },
-  5: { title: "Takashimaya Times Square & Eagle Jazz Kissa", area: "Shinjuku", desc: "Sheltered 14-story complex connected to Shinjuku Station, followed by an underground dim amber vinyl listening bar.", icon: "🎷" },
-  6: { title: "Pola Museum of Art & Hakone Open-Air Picasso Hall", area: "Hakone", desc: "A subterranean glass museum nestled inside a beech forest featuring Monet, Renoir, and sheltered sculpture pavilions.", icon: "🏛️" },
-  7: { title: "In-Room Onsen Soaking & Tatami Kaiseki", area: "Gora Kadan", desc: "Watch the mountain rain drift across imperial cedar pines from your private thermal bath with hot green tea.", icon: "♨️" },
-  8: { title: "Nakanoshima Museum of Art & Whity Umeda Labyrinth", area: "Osaka", desc: "Modern black-box museum next to the Conrad, connected to Osaka's endless covered underground shopping city.", icon: "🎨" },
-  9: { title: "Kobe City Museum & Sannomiya Center Gai Covered Arcade", area: "Kobe", desc: "A 600-meter weatherproof covered shopping street with tea salons, retro kissaten, and sheltered teppanyaki.", icon: "🛍️" },
-  10: { title: "Yamazaki Indoor Tasting Lounge & Kuromon Arcade", area: "Yamazaki / Namba", desc: "Suntory whisky museum, library of single malts, and Kuromon Market's 300 sheltered food stalls.", icon: "🥃" },
-  11: { title: "Todai-ji Great Buddha Hall & Shinsaibashi Covered Arcade", area: "Nara / Osaka", desc: "The world's largest wooden building protects the 15m bronze Daibutsu, followed by 2km of covered Dotonbori shopping.", icon: "🪷" },
-  12: { title: "Kaiyukan Osaka Aquarium & Tempozan Marketplace", area: "Osaka Bay", desc: "One of the world's greatest indoor aquariums with whale sharks in a 9-meter deep central Pacific tank.", icon: "🦈" },
-  13: { title: "Sanjusangen-do 1,001 Golden Statues & Kyoto Station Atrium", area: "Higashiyama", desc: "An endless 120-meter indoor hall of gilded 12th-century deities directly across from the Hyatt Regency.", icon: "✨" },
-  14: { title: "Kyoto National Museum of Modern Art & Hosomi Museum", area: "Okazaki", desc: "Two premier cultural spaces right by Heian Shrine with indoor Japanese gardens and sheltered teahouses.", icon: "🖼️" },
-  15: { title: "Teramachi & Shinkyogoku Covered Historic Shotengai", area: "Central Kyoto", desc: "Miles of historic covered arcade streets lined with 300-year-old tea shops, woodblock print dealers, and ramen counters.", icon: "🏮" },
-  16: { title: "Kennin-ji Zen Hall & Takagamine Indoor Tea Pavilion", area: "Gion", desc: "Kyoto's oldest Zen temple with twin dragon ceilings on cedar tatami, completely sheltered from rain.", icon: "🐉" },
-  17: { title: "Fukuda Art Museum & Arashiyama Scenic Waterfront Gallery", area: "Arashiyama", desc: "Floor-to-ceiling glass panoramic cafe overlooking the misty Oi River and Togetsukyo bridge in the rain.", icon: "🍵" },
-  18: { title: "Nijo Castle Ninomaru Palace & Gekkeikan Sake Museum", area: "Central Kyoto / Fushimi", desc: "Walk the covered nightingale-floor corridors of Tokugawa shoguns and tour ancient wooden sake fermentation storehouses.", icon: "🍶" },
-  19: { title: "Kyoto Station Isetan & KIX Sky View Lounge", area: "Transit", desc: "Completely sheltered transit via JR Haruka express straight into the Renzo Piano airport terminal.", icon: "🚄" },
+  1:  { title: "Sanjusangen-do 1,001 Golden Statues & Kyoto Station Atrium", area: "Higashiyama", desc: "An endless 120-meter indoor hall of gilded 12th-century deities directly across from the Hyatt Regency.", icon: "✨" },
+  2:  { title: "Teramachi & Shinkyogoku Covered Historic Shotengai", area: "Central Kyoto", desc: "Miles of historic covered arcade streets lined with 300-year-old tea shops, woodblock print dealers, and ramen counters.", icon: "🏮" },
+  3:  { title: "Kyoto National Museum of Modern Art & Hosomi Museum", area: "Okazaki", desc: "Two premier cultural spaces right by Heian Shrine with indoor Japanese gardens and sheltered teahouses.", icon: "🖼️" },
+  4:  { title: "Kennin-ji Zen Hall & RIRAKU Indoor Spa Sanctuary", area: "Gion / Higashiyama", desc: "Twin dragon ceilings on cedar tatami, followed by a warm camellia oil Shiatsu acupressure session.", icon: "💆" },
+  5:  { title: "Nakanoshima Museum of Art & Whity Umeda Labyrinth", area: "Osaka", desc: "Modern black-box museum next to the Conrad, connected to Osaka's endless covered underground shopping city.", icon: "🎨" },
+  6:  { title: "Kobe City Museum & Sannomiya Center Gai Covered Arcade", area: "Kobe", desc: "A 600-meter weatherproof covered shopping street with tea salons, retro kissaten, and sheltered teppanyaki.", icon: "🛍️" },
+  7:  { title: "Todai-ji Great Buddha Hall & Shinsaibashi Covered Arcade", area: "Nara / Osaka", desc: "The world's largest wooden building protects the 15m bronze Daibutsu, followed by 2km of covered Shinsaibashi shopping.", icon: "🪷" },
+  8:  { title: "Yamazaki Indoor Tasting Lounge & Kuromon Arcade", area: "Yamazaki / Namba", desc: "Suntory whisky museum, library of single malts, and Kuromon Market's 300 sheltered food stalls.", icon: "🥃" },
+  9:  { title: "In-Room Onsen Soaking & Tatami Shiatsu", area: "Gora Kadan", desc: "Watch the mountain rain drift across imperial cedar pines from your private thermal bath with hot green tea and in-room massage.", icon: "♨️" },
+  10: { title: "Pola Museum of Art & Hakone Open-Air Picasso Hall", area: "Hakone", desc: "A subterranean glass museum nestled inside a beech forest featuring Monet, Renoir, and sheltered sculpture pavilions.", icon: "🏛️" },
+  11: { title: "Ginza Six & Mitsukoshi Depachika", area: "Ginza", desc: "Skip the rain outside by exploring Ginza's underground luxury food halls — gourmet pastries, seasonal fruit, and warm dashi broth counters.", icon: "🏬" },
+  12: { title: "Tokyo Skytree Solamachi & Sumida Aquarium", area: "East Tokyo", desc: "Over 300 covered shops, dining halls, and indoor ocean galleries beneath Tokyo Skytree.", icon: "🦈" },
+  13: { title: "Akihabara Radio Kaikan & Kanda Soba", area: "Akihabara / Kanda", desc: "Multi-floor indoor retro electronics cathedrals, vinyl listening rooms, and historic 1880 sheltered dining.", icon: "🎮" },
+  14: { title: "Omotesando Hills & Covered Cat Street Arcades", area: "Harajuku / Omotesando", desc: "Tadao Ando's spiral Omotesando Hills complex, sheltered boutique cafes, and Kengo Kuma's Nezu Museum.", icon: "☕" },
+  15: { title: "Studio Ghibli Museum & Harmonica Yokocho Arcades", area: "Mitaka / Kichijoji", desc: "Hayao Miyazaki's whimsical indoor animation mansion followed by covered post-war alleyways in Kichijoji.", icon: "🎨" },
+  16: { title: "Daikanyama T-Site & Roppongi Hills Mori Art Museum", area: "Daikanyama / Roppongi", desc: "Sheltered architectural bookstore labyrinth followed by 53rd-floor contemporary art galleries overlooking the skyline.", icon: "📚" },
+  17: { title: "Isetan Shinjuku B1/B2 Food Hall & Seiko Museum", area: "Shinjuku / Ginza", desc: "Japan's most celebrated subterranean food market followed by Grand Seiko horology gallery floors under glass.", icon: "🍰" },
+  18: { title: "Saitama Super Arena Indoor Arena & Shinjuku Komehyo", area: "Saitama / Shinjuku", desc: "Massive state-of-the-art indoor arena complex for Radiohead, preceded by covered luxury vintage watch galleries.", icon: "🎸" },
+  19: { title: "Haneda Airport International Sky Lounge & Shopping Arcades", area: "Transit", desc: "Completely sheltered transit via Keikyu express straight into the airport observation deck and lounge.", icon: "🚄" },
 };
 
 // ── CALENDAR (.ICS) EXPORTER ──────────────────────────────────────────────────
 const downloadIcsCalendar = () => {
   const events = [
-    { title: "Flight to Tokyo (Arrive Haneda/Narita)", start: "20270528T140000Z", end: "20270528T170000Z", desc: "Clear customs and head to Hyatt Centric Ginza Tokyo", loc: "Haneda Airport, Tokyo" },
-    { title: "Check-in: Hyatt Centric Ginza Tokyo", start: "20270528T173000Z", end: "20270528T183000Z", desc: "5-Night Stay booked with World of Hyatt Points", loc: "6-6-7 Ginza, Chuo City, Tokyo" },
-    { title: "Ginza Sushi Counter (O-toro Omakase)", start: "20270528T203000Z", end: "20270528T223000Z", desc: "Hinoki counter reservation (Saito / Sawada / Harutaka)", loc: "Ginza, Tokyo" },
-    { title: "Studio Ghibli Museum (Mitaka)", start: "20270529T120000Z", end: "20270529T140000Z", desc: "Noon Entry ticket. Lawson lottery reservation.", loc: "1-1-83 Shimorenjaku, Mitaka, Tokyo" },
-    { title: "Shinjuku Golden Gai & Omoide Yokocho Bender", start: "20270531T193000Z", end: "20270601T033000Z", desc: "Nocturnal bar crawl across 200 micro-bars. Sleep in tomorrow!", loc: "Kabukicho, Shinjuku, Tokyo" },
-    { title: "Tokaido Shinkansen to Odawara / Hakone", start: "20270602T090000Z", end: "20270602T100000Z", desc: "Bullet train from Tokyo Station to Odawara, transfer to Gora Kadan", loc: "Tokyo Station, Tokyo" },
-    { title: "Check-in: Gora Kadan (Hakone)", start: "20270602T150000Z", end: "20270602T160000Z", desc: "Relais & Chateaux luxury onsen ryokan. Kaiseki included.", loc: "1300 Gora, Hakone, Kanagawa" },
-    { title: "Odawara to Shin-Osaka Shinkansen Hikari", start: "20270604T133000Z", end: "20270604T160000Z", desc: "High-speed rail along Pacific coast to Osaka", loc: "Odawara Station, Kanagawa" },
-    { title: "Check-in: Conrad Osaka", start: "20270604T170000Z", end: "20270604T180000Z", desc: "5-Night 5-Star Stay on Nakanoshima island (Hilton)", loc: "3-2-4 Nakanoshima, Kita Ward, Osaka" },
-    { title: "Suntory Yamazaki Distillery Tasting", start: "20270606T100000Z", end: "20270606T123000Z", desc: "Whisky distillery tour & library tasting lounge", loc: "5-2-1 Yamazaki, Shimamoto, Osaka" },
-    { title: "Hanshin Tigers at Koshien Stadium", start: "20270608T180000Z", end: "20270608T213000Z", desc: "Legendary Japanese baseball atmosphere & 7th-inning balloons", loc: "Koshien Stadium, Nishinomiya" },
-    { title: "Check-in: Hyatt Regency Kyoto", start: "20270609T143000Z", end: "20270609T153000Z", desc: "6-Night Stay in Higashiyama booked with Hyatt Points", loc: "644-2 Sanjusangendo Mawaricho, Higashiyama, Kyoto" },
-    { title: "Kikunoi Honten Farewell Kaiseki", start: "20270614T200000Z", end: "20270614T230000Z", desc: "17-Course Capstone Kaiseki in Gion since 1912", loc: "459 Shimokawaracho, Higashiyama, Kyoto" },
-    { title: "Kyoto to KIX Haruka Express & Flight", start: "20270615T083000Z", end: "20270615T120000Z", desc: "Haruka Express to Kansai Airport for international flight", loc: "Kyoto Station, Kyoto" }
+    { title: "Flight to Kansai Airport (Arrive KIX)", start: "20270528T140000Z", end: "20270528T170000Z", desc: "Clear customs and board the Haruka Express direct to Kyoto", loc: "Kansai International Airport, Osaka" },
+    { title: "Check-in: Hyatt Regency Kyoto", start: "20270528T173000Z", end: "20270528T183000Z", desc: "4-Night Stay in Higashiyama booked with World of Hyatt Points", loc: "644-2 Sanjusangendo Mawaricho, Higashiyama, Kyoto" },
+    { title: "Kaiseki at Nakamura (1716)", start: "20270530T193000Z", end: "20270530T220000Z", desc: "300-year-old 3-star culinary institution near Nishiki", loc: "Nishiki, Kyoto" },
+    { title: "Traditional Shiatsu Massage at RIRAKU Spa", start: "20270531T153000Z", end: "20270531T170000Z", desc: "90-minute meridian acupressure & camellia oil bodywork", loc: "Hyatt Regency Kyoto, Higashiyama" },
+    { title: "Kikunoi Honten Farewell Kaiseki", start: "20270531T200000Z", end: "20270531T230000Z", desc: "17-Course Capstone Kaiseki in Gion with master Yoshihiro Murata", loc: "459 Shimokawaracho, Higashiyama, Kyoto" },
+    { title: "Check-in: Conrad Osaka", start: "20270601T133000Z", end: "20270601T150000Z", desc: "4-Night 5-Star Stay on Nakanoshima island (58th floor)", loc: "3-2-4 Nakanoshima, Kita Ward, Osaka" },
+    { title: "Mt. Rokko Championship Golf & Kobe Beef at Misono", start: "20270602T083000Z", end: "20270602T210000Z", desc: "18 holes overlooking Osaka Bay followed by certified A5 Tajima Kobe beef", loc: "Rokko Kokusai Golf Club / Kobe" },
+    { title: "Ancient Nara Daytrip (Daibutsu & Sika Deer)", start: "20270603T090000Z", end: "20270603T160000Z", desc: "Todai-ji 15m bronze Buddha, 1,200 bowing deer in Nara Park, Kasuga Taisha", loc: "Nara Park, Nara" },
+    { title: "Suntory Yamazaki Tasting & Koshien Stadium Baseball", start: "20270604T100000Z", end: "20270604T213000Z", desc: "VIP Single Malt whisky tour & Hanshin Tigers baseball game", loc: "Yamazaki / Koshien Stadium" },
+    { title: "Check-in: Gora Kadan (Hakone)", start: "20270605T150000Z", end: "20270605T160000Z", desc: "Relais & Châteaux imperial ryokan, private onsen & in-room tatami Shiatsu", loc: "1300 Gora, Hakone, Kanagawa" },
+    { title: "Check-in: Hyatt Centric Ginza Tokyo", start: "20270607T133000Z", end: "20270607T150000Z", desc: "8-Night Stay in Ginza booked with World of Hyatt Points", loc: "6-6-7 Ginza, Chuo City, Tokyo" },
+    { title: "Ginza Hinoki Counter Sushi Omakase", start: "20270607T193000Z", end: "20270607T213000Z", desc: "Intimate 8-seat seasonal omakase nigiri", loc: "Ginza, Tokyo" },
+    { title: "Studio Ghibli Museum & Bar High Five", start: "20270611T110000Z", end: "20270611T223000Z", desc: "Miyazaki animation museum in Mitaka & bespoke cocktails with Ueno-san", loc: "Mitaka / Ginza, Tokyo" },
+    { title: "Radiohead — Live at Saitama Super Arena", start: "20270614T180000Z", end: "20270614T220000Z", desc: "Headline June 2027 arena tour. 30 min direct train via JR Ueno-Tokyo Line from Ginza", loc: "Saitama Super Arena, Saitama" },
+    { title: "Haneda Airport (HND) Flight Home", start: "20270615T163000Z", end: "20270615T200000Z", desc: "Direct Keikyu express to Haneda Terminal 3 for international departure", loc: "Haneda Airport, Tokyo" },
   ];
 
   let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Wanderers Sketchbook//Japan 2027//EN\nCALSCALE:GREGORIAN\nMETHOD:PUBLISH\nX-WR-CALNAME:Wanderers Japan Itinerary 2027\n";
@@ -1756,6 +1757,7 @@ const downloadIcsCalendar = () => {
   a.click();
   document.body.removeChild(a);
 };
+
 
 // ── TAKKYUBIN LUGGAGE FORWARDING MODAL ────────────────────────────────────────
 const TakkyubinModal: React.FC = () => {

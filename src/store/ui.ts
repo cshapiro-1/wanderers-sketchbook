@@ -2,9 +2,21 @@
 import { create } from "zustand";
 import type { UserEdits, Reservation, DocEntry, Activity } from "@/types";
 
-const EDITS_KEY = "wanderer_edits_v1";
-const RESERVATIONS_KEY = "wanderer_reservations_v1";
-const AI_KEY = "wanderer_ai_v1";
+const EDITS_KEY = "wanderer_edits_v2";
+const RESERVATIONS_KEY = "wanderer_reservations_v2";
+const AI_KEY = "wanderer_ai_v2";
+
+// Clear legacy v1 localStorage cache if present
+if (typeof window !== "undefined") {
+  try {
+    if (localStorage.getItem("wanderer_edits_v1")) {
+      localStorage.removeItem("wanderer_edits_v1");
+      localStorage.removeItem("wanderer_reservations_v1");
+      localStorage.removeItem("wanderer_ai_v1");
+      localStorage.removeItem("wanderer_booked_v1");
+    }
+  } catch {}
+}
 
 export interface TravelStore {
   activeDay: number;
