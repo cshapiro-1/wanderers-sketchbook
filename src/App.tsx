@@ -62,7 +62,7 @@ const Header: React.FC = () => {
     <header className="app-header">
       <div className="header-left">
         <h1>The Wanderer's Sketchbook</h1>
-        <p>An 18-Day Journey Through Landscapes, Flavors, and Hidden Valleys</p>
+        <p>A 19-Day Journey (18 Nights) Through Kyoto, Osaka, Hakone &amp; Tokyo</p>
       </div>
       <div className="header-actions">
         <div className="header-btns-desktop">
@@ -4236,7 +4236,7 @@ const App: React.FC = () => {
   const touchStartRef = React.useRef(0);
   const [mobileTab, setMobileTab] = React.useState<'journal'|'map'>('journal');
   return (
-    <APIProvider apiKey={(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || ''}>
+    <APIProvider apiKey={(import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || (typeof window !== 'undefined' ? localStorage.getItem('wanderer_gmaps_key') : null) || ''}>
       <div className={`app-container mobile-view-${mobileTab}${storyDay !== null ? ' story-mode' : ''}`}>
         <AmbientLayer />
         <ParticleCanvas />
