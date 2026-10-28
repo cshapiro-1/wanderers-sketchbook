@@ -74,9 +74,10 @@ export const activities: Record<number, Activity[]> = {
   ],
   13: [
     { lat:35.6825, lng:139.7791, title:"Arashio Stable — Sumo Morning Practice", time:"07:30 AM",   type:"museum",     desc:"Watch massive sumo rikishi train up close during morning keiko practice through the street-level viewing gallery in Nihonbashi." , duration:"~2 hrs"},
-    { lat:35.7164, lng:139.7845, title:"Kappabashi Knife Street",          time:"10:30 AM",   type:"shop",       desc:"Tokyo's legendary chef and knife district — browse handcrafted Japanese Damascus blades, whetstones, and kitchenware." , duration:"~1.5 hrs"},
-    { lat:35.6941, lng:139.7735, title:"Kanda Yabu Soba",               time:"01:00 PM",   type:"restaurant", desc:"Handcrafted buckwheat soba noodles in a historic 1880 wooden teahouse." , duration:"~1 hr"},
-    { lat:35.7023, lng:139.7715, title:"Akihabara Electric Town",          time:"02:30 PM",   type:"shop",       desc:"Multi-floor retro electronics, vintage gaming arcades, and collector stores in Tokyo's anime and tech capital." , duration:"~2 hrs"},
+    { lat:35.7143, lng:139.7888, title:"Kappabashi Knife Street",          time:"10:00 AM",   type:"shop",       desc:"Tokyo's legendary chef and knife district — browse handcrafted Japanese Damascus blades, whetstones, and artisan copperware at Kamata and Tsubaya." , duration:"~1.5 hrs"},
+    { lat:35.7126, lng:139.7892, title:"Dengama & Edo Kiriko — Sake Cups, Ceramics & Glassware", time:"11:30 AM", type:"shop", desc:"At the southern gate of Kappabashi — hunt for handcrafted ceramic guinomi sake cups, tokkuri carafes, Mino & Arita stoneware, and hand-cut Edo Kiriko crystal glassware." , duration:"~1 hr"},
+    { lat:35.6941, lng:139.7735, title:"Kanda Yabu Soba",               time:"01:15 PM",   type:"restaurant", desc:"Handcrafted buckwheat soba noodles in a historic 1880 wooden teahouse." , duration:"~1 hr"},
+    { lat:35.7023, lng:139.7715, title:"Akihabara Electric Town",          time:"02:45 PM",   type:"shop",       desc:"Multi-floor retro electronics, vintage gaming arcades, and collector stores in Tokyo's anime and tech capital." , duration:"~2 hrs"},
     { lat:35.6814, lng:139.7673, title:"Cotton Club Jazz, Marunouchi",     time:"08:00 PM",   type:"restaurant", desc:"Sophisticated supper club jazz lounge beneath the Marunouchi skyline." , optional:true, duration:"~2 hrs"},
   ],
   14: [
@@ -212,7 +213,7 @@ export const dayMeta: Record<number, { title: string; lodging: string }> = {
   10: { title: "Day 10: Volcanic Vents & Open-Air Sculpture",          lodging: "Gora Kadan" },
   11: { title: "Day 11: Romancecar to Tokyo & Ginza Omakase",          lodging: "Hyatt Centric Ginza" },
   12: { title: "Day 12: Tsukiji Sashimi, Senso-ji & Sumida River",    lodging: "Hyatt Centric Ginza" },
-  13: { title: "Day 13: Sumo at Dawn, Damascus Knives & Kanda Soba",   lodging: "Hyatt Centric Ginza" },
+  13: { title: "Day 13: Sumo, Damascus Knives, Sake Ware & Soba",    lodging: "Hyatt Centric Ginza" },
   14: { title: "Day 14: Meiji Shrine, Aoyama Gardens & Shibuya Night", lodging: "Hyatt Centric Ginza" },
   15: { title: "Day 15: Studio Ghibli, Inokashira & Bar High Five",    lodging: "Hyatt Centric Ginza" },
   16: { title: "Day 16: Daikanyama T-Site, Nakameguro & Mori Art",     lodging: "Hyatt Centric Ginza" },

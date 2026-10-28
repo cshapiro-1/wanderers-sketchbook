@@ -28,6 +28,7 @@ export const activityUrls: Record<string, string> = {
   'Kabukicho Pachinko — Walk-Through':   'https://maps.google.com/maps?q=Maruhan+Shinjuku',
   'Nekorobi Cat Café, Asakusa':          'https://www.nekorobi.jp/',
   'Kappabashi Knife Street':             'https://www.kappabashi.or.jp/en/',
+  'Dengama & Edo Kiriko — Sake Cups, Ceramics & Glassware': 'https://maps.google.com/maps?q=Dengama+Kappabashi+Tokyo',
   'Senso-ji Temple, Asakusa':            'https://www.senso-ji.jp/english/',
   'Hamarikyu Gardens':                   'https://www.tokyo-park.or.jp/park/hamarikyu/',
   'Omoide Yokocho':                      'https://maps.google.com/maps?q=Omoide+Yokocho+Shinjuku+Tokyo',

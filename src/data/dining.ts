@@ -72,6 +72,7 @@ export const activityPrices: Record<string, number> = {
   'Kabukicho Pachinko — Walk-Through': 0,  // free to walk in
   'Nekorobi Cat Café, Asakusa': 12,      // ¥1,500 entry + drink ~$12
   'Kappabashi Knife Street': 0,
+  'Dengama & Edo Kiriko — Sake Cups, Ceramics & Glassware': 0,
   'Senso-ji Temple, Asakusa': 0,
   'Hamarikyu Gardens': 2,              // ¥300 = $2
   'Tsukiji Outer Market': 0,
